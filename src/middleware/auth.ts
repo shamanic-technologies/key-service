@@ -24,7 +24,7 @@ export function serviceKeyAuth(
     return res.status(500).json({ error: "Service not configured" });
   }
 
-  const authHeader = req.headers["x-service-key"] || req.headers["authorization"];
+  const authHeader = req.headers["x-api-key"] || req.headers["authorization"];
   const providedKey = typeof authHeader === "string" 
     ? authHeader.replace(/^Bearer\s+/i, "") 
     : null;
