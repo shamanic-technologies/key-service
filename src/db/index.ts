@@ -8,5 +8,7 @@ if (!connectionString) {
   throw new Error("KEY_SERVICE_DATABASE_URL is not set");
 }
 
-export const sql = postgres(connectionString);
+export const sql = postgres(connectionString, {
+  onnotice: () => {}, // Suppress NOTICE messages from migrations
+});
 export const db = drizzle(sql, { schema });
