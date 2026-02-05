@@ -1,5 +1,4 @@
-// IMPORTANT: Import instrument first to initialize Sentry before anything else
-import "./instrument.js";
+// Note: Sentry is initialized via --import flag in package.json/Dockerfile
 import * as Sentry from "@sentry/node";
 import express from "express";
 import cors from "cors";

@@ -1,10 +1,15 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
-import { eq, and } from "drizzle-orm";
-import { db } from "../../src/db/index.js";
-import { orgs, apiKeys, byokKeys } from "../../src/db/schema.js";
-import { cleanTestData, closeDb, insertTestOrg, insertTestApiKey, insertTestByokKey } from "../helpers/test-db.js";
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
+import { eq } from "drizzle-orm";
 
-describe("Keys Service Database", () => {
+// Skip if using default test database URL (no real db configured)
+const isRealDbConfigured = process.env.KEY_SERVICE_DATABASE_URL &&
+  !process.env.KEY_SERVICE_DATABASE_URL.includes("localhost/test");
+
+describe.skipIf(!isRealDbConfigured)("Keys Service Database", async () => {
+  const { db, sql } = await import("../../src/db/index.js");
+  const { orgs, apiKeys, byokKeys } = await import("../../src/db/schema.js");
+  const { cleanTestData, closeDb, insertTestOrg, insertTestApiKey, insertTestByokKey } = await import("../helpers/test-db.js");
+
   beforeEach(async () => {
     await cleanTestData();
   });
@@ -17,7 +22,7 @@ describe("Keys Service Database", () => {
   describe("orgs table", () => {
     it("should create and query an org", async () => {
       const org = await insertTestOrg({ clerkOrgId: "org_test123" });
-      
+
       expect(org.id).toBeDefined();
       expect(org.clerkOrgId).toBe("org_test123");
     });
@@ -31,7 +36,7 @@ describe("Keys Service Database", () => {
         keyPrefix: "mcpf_abc",
         name: "Production Key",
       });
-      
+
       expect(key.id).toBeDefined();
       expect(key.keyHash).toBe("abc123hash");
       expect(key.keyPrefix).toBe("mcpf_abc");
@@ -40,7 +45,7 @@ describe("Keys Service Database", () => {
     it("should enforce unique keyHash", async () => {
       const org = await insertTestOrg();
       await insertTestApiKey(org.id, { keyHash: "unique_hash" });
-      
+
       await expect(
         insertTestApiKey(org.id, { keyHash: "unique_hash" })
       ).rejects.toThrow();
@@ -49,9 +54,9 @@ describe("Keys Service Database", () => {
     it("should cascade delete when org is deleted", async () => {
       const org = await insertTestOrg();
       const key = await insertTestApiKey(org.id);
-      
+
       await db.delete(orgs).where(eq(orgs.id, org.id));
-      
+
       const found = await db.query.apiKeys.findFirst({
         where: eq(apiKeys.id, key.id),
       });
@@ -66,7 +71,7 @@ describe("Keys Service Database", () => {
         provider: "anthropic",
         encryptedKey: "encrypted_value",
       });
-      
+
       expect(key.id).toBeDefined();
       expect(key.provider).toBe("anthropic");
     });
@@ -74,7 +79,7 @@ describe("Keys Service Database", () => {
     it("should enforce unique org+provider", async () => {
       const org = await insertTestOrg();
       await insertTestByokKey(org.id, { provider: "apollo" });
-      
+
       await expect(
         insertTestByokKey(org.id, { provider: "apollo" })
       ).rejects.toThrow();
@@ -83,19 +88,19 @@ describe("Keys Service Database", () => {
     it("should allow same provider for different orgs", async () => {
       const org1 = await insertTestOrg({ clerkOrgId: "org_1" });
       const org2 = await insertTestOrg({ clerkOrgId: "org_2" });
-      
+
       await insertTestByokKey(org1.id, { provider: "apollo" });
       const key2 = await insertTestByokKey(org2.id, { provider: "apollo" });
-      
+
       expect(key2.id).toBeDefined();
     });
 
     it("should cascade delete when org is deleted", async () => {
       const org = await insertTestOrg();
       const key = await insertTestByokKey(org.id);
-      
+
       await db.delete(orgs).where(eq(orgs.id, org.id));
-      
+
       const found = await db.query.byokKeys.findFirst({
         where: eq(byokKeys.id, key.id),
       });
