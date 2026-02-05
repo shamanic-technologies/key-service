@@ -9,6 +9,34 @@ export interface AuthenticatedRequest extends Request {
 }
 
 /**
+ * Authenticate via service API key (for service-to-service calls)
+ * Checks KEY_SERVICE_API_KEY environment variable
+ */
+export function serviceKeyAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const serviceKey = process.env.KEY_SERVICE_API_KEY;
+  
+  if (!serviceKey) {
+    console.error("KEY_SERVICE_API_KEY not configured");
+    return res.status(500).json({ error: "Service not configured" });
+  }
+
+  const authHeader = req.headers["x-service-key"] || req.headers["authorization"];
+  const providedKey = typeof authHeader === "string" 
+    ? authHeader.replace(/^Bearer\s+/i, "") 
+    : null;
+
+  if (!providedKey || providedKey !== serviceKey) {
+    return res.status(401).json({ error: "Invalid service key" });
+  }
+
+  next();
+}
+
+/**
  * Authenticate via API key (for MCP/external clients)
  * Called by api-service to validate user API keys
  */

@@ -8,6 +8,7 @@ API key and BYOK (Bring Your Own Key) management microservice. Handles authentic
 - **BYOK Key Storage**: Securely store and retrieve external API keys (Apollo, Anthropic, etc.)
 - **AES-256-GCM Encryption**: All sensitive keys encrypted at rest
 - **Auto-migrations**: Database schema automatically applied on startup
+- **Service-to-Service Auth**: Internal routes protected by KEY_SERVICE_API_KEY
 
 ## Tech Stack
 
@@ -24,11 +25,10 @@ API key and BYOK (Bring Your Own Key) management microservice. Handles authentic
 KEY_SERVICE_DATABASE_URL=postgres://...  # PostgreSQL connection string
 ENCRYPTION_KEY=<64-char-hex>             # 32-byte hex key for AES-256-GCM
 CLERK_SECRET_KEY=sk_...                  # Clerk backend API key
+KEY_SERVICE_API_KEY=<secret>             # Service-to-service auth key
 
 # Optional
 SENTRY_DSN=https://...                   # Sentry error tracking
-PORT=3001                                # Server port (default: 3001)
-NODE_ENV=production                      # Environment
 ```
 
 ## Development
@@ -65,14 +65,14 @@ pnpm db:studio
 
 ## API Endpoints
 
-### Health
+### Health (Public)
 - `GET /health` — Health check
 
 ### Validation (API Key Auth Required)
 - `GET /validate` — Validate API key, returns org info
 - `GET /validate/keys/:provider` — Get decrypted BYOK key
 
-### Internal (Service-to-Service)
+### Internal (Service Key Required via `X-Service-Key` header)
 - `GET /internal/api-keys` — List API keys
 - `POST /internal/api-keys` — Create API key
 - `DELETE /internal/api-keys/:id` — Delete API key
@@ -92,6 +92,7 @@ docker run -p 3001:3001 \
   -e KEY_SERVICE_DATABASE_URL=... \
   -e ENCRYPTION_KEY=... \
   -e CLERK_SECRET_KEY=... \
+  -e KEY_SERVICE_API_KEY=... \
   key-service
 ```
 

@@ -8,6 +8,7 @@ import { db } from "./db/index.js";
 import healthRoutes from "./routes/health.js";
 import internalRoutes from "./routes/internal.js";
 import validateRoutes from "./routes/validate.js";
+import { serviceKeyAuth } from "./middleware/auth.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -21,8 +22,8 @@ app.use(healthRoutes);
 // API key validation (called by api-service with API key in header)
 app.use(validateRoutes);
 
-// Internal routes (service-to-service with X-API-Key)
-app.use("/internal", internalRoutes);
+// Internal routes (service-to-service, protected by KEY_SERVICE_API_KEY)
+app.use("/internal", serviceKeyAuth, internalRoutes);
 
 // 404
 app.use((req, res) => {
