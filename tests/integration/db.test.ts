@@ -1,11 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { eq } from "drizzle-orm";
 
-// Skip if using default test database URL (no real db configured)
-const isRealDbConfigured = process.env.KEY_SERVICE_DATABASE_URL &&
-  !process.env.KEY_SERVICE_DATABASE_URL.includes("localhost/test");
-
-describe.skipIf(!isRealDbConfigured)("Keys Service Database", async () => {
+describe("Keys Service Database", async () => {
   const { db, sql } = await import("../../src/db/index.js");
   const { orgs, apiKeys, byokKeys } = await import("../../src/db/schema.js");
   const { cleanTestData, closeDb, insertTestOrg, insertTestApiKey, insertTestByokKey } = await import("../helpers/test-db.js");
