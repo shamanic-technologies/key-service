@@ -19,6 +19,9 @@ dist/
 # Test coverage
 coverage/
 
+# Generated
+openapi.json
+
 # Logs
 *.log
 npm-debug.log*
