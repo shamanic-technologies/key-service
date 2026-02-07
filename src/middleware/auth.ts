@@ -29,14 +29,11 @@ export function serviceKeyAuth(
     ? authHeader.replace(/^Bearer\s+/i, "")
     : null;
 
-  console.log(`[KEY SERVICE] auth check: method=${req.method} path=${req.path} xApiKeyHeader=${!!req.headers["x-api-key"]} authorizationHeader=${!!req.headers["authorization"]} providedKeyLen=${providedKey?.length ?? 0} expectedKeyLen=${serviceKey.length} keysMatch=${providedKey === serviceKey}`);
-
   if (!providedKey || providedKey !== serviceKey) {
-    console.warn(`[KEY SERVICE] auth REJECTED: providedKeyPrefix=${providedKey?.slice(0, 4) ?? "null"}... expectedKeyPrefix=${serviceKey.slice(0, 4)}...`);
+    console.warn(`[KEY SERVICE] auth REJECTED: method=${req.method} path=${req.path}`);
     return res.status(401).json({ error: "Invalid service key" });
   }
 
-  console.log("[KEY SERVICE] auth OK");
   next();
 }
 
