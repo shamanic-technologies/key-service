@@ -3,12 +3,19 @@
  * No auth needed - Railway private network
  */
 
-import { Router, Request, Response, NextFunction } from "express";
+import { Router, Request, Response } from "express";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { apiKeys, byokKeys, orgs, users } from "../db/schema.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/api-key.js";
 import { encrypt, decrypt, maskKey } from "../lib/crypto.js";
+import {
+  CreateApiKeyRequestSchema,
+  DeleteApiKeyRequestSchema,
+  SessionApiKeyRequestSchema,
+  CreateByokKeyRequestSchema,
+  DeleteByokKeyQuerySchema,
+} from "../schemas.js";
 
 const router = Router();
 
@@ -76,12 +83,12 @@ router.get("/api-keys", async (req: Request, res: Response) => {
  */
 router.post("/api-keys", async (req: Request, res: Response) => {
   try {
-    const { clerkOrgId, name } = req.body;
-
-    if (!clerkOrgId) {
-      return res.status(400).json({ error: "clerkOrgId required" });
+    const parsed = CreateApiKeyRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
+    const { clerkOrgId, name } = parsed.data;
     const orgId = await ensureOrg(clerkOrgId);
 
     const rawKey = generateApiKey();
@@ -118,12 +125,12 @@ router.post("/api-keys", async (req: Request, res: Response) => {
 router.delete("/api-keys/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { clerkOrgId } = req.body;
-
-    if (!clerkOrgId) {
+    const parsed = DeleteApiKeyRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
       return res.status(400).json({ error: "clerkOrgId required" });
     }
 
+    const { clerkOrgId } = parsed.data;
     const orgId = await ensureOrg(clerkOrgId);
 
     const result = await db
@@ -149,12 +156,12 @@ router.delete("/api-keys/:id", async (req: Request, res: Response) => {
  */
 router.post("/api-keys/session", async (req: Request, res: Response) => {
   try {
-    const { clerkOrgId } = req.body;
-
-    if (!clerkOrgId) {
+    const parsed = SessionApiKeyRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
       return res.status(400).json({ error: "clerkOrgId required" });
     }
 
+    const { clerkOrgId } = parsed.data;
     const orgId = await ensureOrg(clerkOrgId);
 
     const existing = await db.query.apiKeys.findFirst({
@@ -244,18 +251,12 @@ router.get("/keys", async (req: Request, res: Response) => {
  */
 router.post("/keys", async (req: Request, res: Response) => {
   try {
-    const { clerkOrgId, provider, apiKey } = req.body;
-
-    if (!clerkOrgId || !provider || !apiKey) {
-      return res.status(400).json({ error: "clerkOrgId, provider, and apiKey required" });
+    const parsed = CreateByokKeyRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
-    if (!VALID_PROVIDERS.includes(provider)) {
-      return res.status(400).json({
-        error: `Invalid provider. Valid providers: ${VALID_PROVIDERS.join(", ")}`,
-      });
-    }
-
+    const { clerkOrgId, provider, apiKey } = parsed.data;
     const orgId = await ensureOrg(clerkOrgId);
     const encryptedKey = encrypt(apiKey);
 
@@ -295,11 +296,12 @@ router.post("/keys", async (req: Request, res: Response) => {
 router.delete("/keys/:provider", async (req: Request, res: Response) => {
   try {
     const { provider } = req.params;
-    const clerkOrgId = req.query.clerkOrgId as string;
-
-    if (!clerkOrgId) {
+    const parsed = DeleteByokKeyQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
       return res.status(400).json({ error: "clerkOrgId required" });
     }
+
+    const { clerkOrgId } = parsed.data;
 
     if (!VALID_PROVIDERS.includes(provider)) {
       return res.status(400).json({ error: "Invalid provider" });
