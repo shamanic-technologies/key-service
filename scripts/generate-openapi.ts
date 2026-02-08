@@ -20,7 +20,7 @@ const document = generator.generateDocument({
   },
   servers: [
     {
-      url: process.env.SERVICE_URL || "http://localhost:3001",
+      url: process.env.KEY_SERVICE_URL || "http://localhost:3001",
     },
   ],
 });
