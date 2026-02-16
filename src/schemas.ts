@@ -375,6 +375,148 @@ registry.registerPath({
   },
 });
 
+// ==================== Internal: App Keys ====================
+
+const AppIdQuerySchema = z
+  .object({
+    appId: z.string().min(1),
+  })
+  .openapi("AppIdQuery");
+
+const AppKeyItemSchema = z
+  .object({
+    provider: z.string(),
+    maskedKey: z.string(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+  })
+  .openapi("AppKeyItem");
+
+const ListAppKeysResponseSchema = z
+  .object({
+    keys: z.array(AppKeyItemSchema),
+  })
+  .openapi("ListAppKeysResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/internal/app-keys",
+  summary: "List app keys for an app",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    query: AppIdQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "List of app keys",
+      content: { "application/json": { schema: ListAppKeysResponseSchema } },
+    },
+    400: { description: "Missing appId" },
+  },
+});
+
+export const CreateAppKeyRequestSchema = z
+  .object({
+    appId: z.string().min(1),
+    provider: z.string().min(1),
+    apiKey: z.string().min(1),
+  })
+  .openapi("CreateAppKeyRequest");
+
+const CreateAppKeyResponseSchema = z
+  .object({
+    provider: z.string(),
+    maskedKey: z.string(),
+    message: z.string(),
+  })
+  .openapi("CreateAppKeyResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/internal/app-keys",
+  summary: "Add or update an app key",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: CreateAppKeyRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "App key saved",
+      content: {
+        "application/json": { schema: CreateAppKeyResponseSchema },
+      },
+    },
+    400: { description: "Invalid request" },
+  },
+});
+
+export const DeleteAppKeyQuerySchema = z
+  .object({
+    appId: z.string().min(1),
+  })
+  .openapi("DeleteAppKeyQuery");
+
+const DeleteAppKeyResponseSchema = z
+  .object({
+    provider: z.string(),
+    message: z.string(),
+  })
+  .openapi("DeleteAppKeyResponse");
+
+registry.registerPath({
+  method: "delete",
+  path: "/internal/app-keys/{provider}",
+  summary: "Delete an app key",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    params: z.object({
+      provider: z.string(),
+    }),
+    query: DeleteAppKeyQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "App key deleted",
+      content: {
+        "application/json": { schema: DeleteAppKeyResponseSchema },
+      },
+    },
+    400: { description: "Invalid request" },
+  },
+});
+
+const DecryptAppKeyResponseSchema = z
+  .object({
+    provider: z.string(),
+    key: z.string(),
+  })
+  .openapi("DecryptAppKeyResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/internal/app-keys/{provider}/decrypt",
+  summary: "Get decrypted app key (internal service use)",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    params: z.object({ provider: z.string() }),
+    query: AppIdQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "Decrypted key",
+      content: {
+        "application/json": { schema: DecryptAppKeyResponseSchema },
+      },
+    },
+    400: { description: "Missing appId" },
+    404: { description: "Key not configured" },
+  },
+});
+
 // ==================== Security schemes ====================
 
 registry.registerComponent("securitySchemes", "bearerAuth", {

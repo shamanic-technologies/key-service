@@ -1,11 +1,12 @@
 import { db, sql } from "../../src/db/index.js";
-import { orgs, users, apiKeys, byokKeys } from "../../src/db/schema.js";
+import { orgs, users, apiKeys, appKeys, byokKeys } from "../../src/db/schema.js";
 
 /**
  * Clean all test data from the database
  */
 export async function cleanTestData() {
   await db.delete(apiKeys);
+  await db.delete(appKeys);
   await db.delete(byokKeys);
   await db.delete(users);
   await db.delete(orgs);
@@ -68,6 +69,23 @@ export async function insertTestByokKey(
     .values({
       orgId,
       provider: data.provider || "apollo",
+      encryptedKey: data.encryptedKey || `encrypted-${Date.now()}`,
+    })
+    .returning();
+  return key;
+}
+
+/**
+ * Insert a test app key
+ */
+export async function insertTestAppKey(
+  data: { appId?: string; provider?: string; encryptedKey?: string } = {}
+) {
+  const [key] = await db
+    .insert(appKeys)
+    .values({
+      appId: data.appId || `test-app-${Date.now()}`,
+      provider: data.provider || "stripe",
       encryptedKey: data.encryptedKey || `encrypted-${Date.now()}`,
     })
     .returning();

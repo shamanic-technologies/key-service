@@ -74,3 +74,22 @@ export type ApiKey = typeof apiKeys.$inferSelect;
 export type NewApiKey = typeof apiKeys.$inferInsert;
 export type ByokKey = typeof byokKeys.$inferSelect;
 export type NewByokKey = typeof byokKeys.$inferInsert;
+
+// App keys (encrypted third-party API keys for apps, keyed by appId)
+export const appKeys = pgTable(
+  "app_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    appId: text("app_id").notNull(),
+    provider: text("provider").notNull(),
+    encryptedKey: text("encrypted_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_app_keys_app_provider").on(table.appId, table.provider),
+  ]
+);
+
+export type AppKey = typeof appKeys.$inferSelect;
+export type NewAppKey = typeof appKeys.$inferInsert;
