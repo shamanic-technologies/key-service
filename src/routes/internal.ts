@@ -6,7 +6,7 @@
 import { Router, Request, Response } from "express";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { apiKeys, byokKeys, orgs, users } from "../db/schema.js";
+import { apiKeys, appKeys, byokKeys, orgs, users } from "../db/schema.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/api-key.js";
 import { encrypt, decrypt, maskKey } from "../lib/crypto.js";
 import {
@@ -15,6 +15,8 @@ import {
   SessionApiKeyRequestSchema,
   CreateByokKeyRequestSchema,
   DeleteByokKeyQuerySchema,
+  CreateAppKeyRequestSchema,
+  DeleteAppKeyQuerySchema,
 } from "../schemas.js";
 
 const router = Router();
@@ -353,6 +355,140 @@ router.get("/keys/:provider/decrypt", async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Decrypt key error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ==================== APP KEYS ====================
+
+/**
+ * GET /internal/app-keys
+ * List app keys for an app (by appId)
+ */
+router.get("/app-keys", async (req: Request, res: Response) => {
+  try {
+    const { appId } = req.query;
+
+    if (!appId || typeof appId !== "string") {
+      return res.status(400).json({ error: "appId required" });
+    }
+
+    const keys = await db.query.appKeys.findMany({
+      where: eq(appKeys.appId, appId),
+    });
+
+    const maskedKeys = keys.map((key) => ({
+      provider: key.provider,
+      maskedKey: maskKey(decrypt(key.encryptedKey)),
+      createdAt: key.createdAt,
+      updatedAt: key.updatedAt,
+    }));
+
+    res.json({ keys: maskedKeys });
+  } catch (error) {
+    console.error("List app keys error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /internal/app-keys
+ * Add or update an app key
+ */
+router.post("/app-keys", async (req: Request, res: Response) => {
+  try {
+    const parsed = CreateAppKeyRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+    }
+
+    const { appId, provider, apiKey } = parsed.data;
+    const encryptedKey = encrypt(apiKey);
+
+    // Upsert
+    const existing = await db.query.appKeys.findFirst({
+      where: and(eq(appKeys.appId, appId), eq(appKeys.provider, provider)),
+    });
+
+    if (existing) {
+      await db
+        .update(appKeys)
+        .set({ encryptedKey, updatedAt: new Date() })
+        .where(eq(appKeys.id, existing.id));
+    } else {
+      await db.insert(appKeys).values({
+        appId,
+        provider,
+        encryptedKey,
+      });
+    }
+
+    res.json({
+      provider,
+      maskedKey: maskKey(apiKey),
+      message: `${provider} key saved successfully`,
+    });
+  } catch (error) {
+    console.error("Set app key error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * DELETE /internal/app-keys/:provider
+ * Delete an app key
+ */
+router.delete("/app-keys/:provider", async (req: Request, res: Response) => {
+  try {
+    const { provider } = req.params;
+    const parsed = DeleteAppKeyQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "appId required" });
+    }
+
+    const { appId } = parsed.data;
+
+    await db
+      .delete(appKeys)
+      .where(and(eq(appKeys.appId, appId), eq(appKeys.provider, provider)));
+
+    res.json({
+      provider,
+      message: `${provider} key deleted successfully`,
+    });
+  } catch (error) {
+    console.error("Delete app key error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /internal/app-keys/:provider/decrypt
+ * Get decrypted app key (for internal service use)
+ */
+router.get("/app-keys/:provider/decrypt", async (req: Request, res: Response) => {
+  try {
+    const { provider } = req.params;
+    const appId = req.query.appId as string;
+
+    if (!appId) {
+      return res.status(400).json({ error: "appId required" });
+    }
+
+    const key = await db.query.appKeys.findFirst({
+      where: and(eq(appKeys.appId, appId), eq(appKeys.provider, provider)),
+    });
+
+    if (!key) {
+      return res.status(404).json({ error: `${provider} key not configured for app ${appId}` });
+    }
+
+    res.json({
+      provider,
+      key: decrypt(key.encryptedKey),
+    });
+  } catch (error) {
+    console.error("Decrypt app key error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

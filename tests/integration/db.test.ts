@@ -3,8 +3,8 @@ import { eq } from "drizzle-orm";
 
 describe("Keys Service Database", async () => {
   const { db, sql } = await import("../../src/db/index.js");
-  const { orgs, apiKeys, byokKeys } = await import("../../src/db/schema.js");
-  const { cleanTestData, closeDb, insertTestOrg, insertTestApiKey, insertTestByokKey } = await import("../helpers/test-db.js");
+  const { orgs, apiKeys, appKeys, byokKeys } = await import("../../src/db/schema.js");
+  const { cleanTestData, closeDb, insertTestOrg, insertTestApiKey, insertTestAppKey, insertTestByokKey } = await import("../helpers/test-db.js");
 
   beforeEach(async () => {
     await cleanTestData();
@@ -101,6 +101,42 @@ describe("Keys Service Database", async () => {
         where: eq(byokKeys.id, key.id),
       });
       expect(found).toBeUndefined();
+    });
+  });
+
+  describe("appKeys table", () => {
+    it("should create an app key", async () => {
+      const key = await insertTestAppKey({
+        appId: "polaritycourse",
+        provider: "stripe",
+        encryptedKey: "encrypted_value",
+      });
+
+      expect(key.id).toBeDefined();
+      expect(key.appId).toBe("polaritycourse");
+      expect(key.provider).toBe("stripe");
+    });
+
+    it("should enforce unique appId+provider", async () => {
+      await insertTestAppKey({ appId: "myapp", provider: "stripe" });
+
+      await expect(
+        insertTestAppKey({ appId: "myapp", provider: "stripe" })
+      ).rejects.toThrow();
+    });
+
+    it("should allow same provider for different apps", async () => {
+      await insertTestAppKey({ appId: "app1", provider: "stripe" });
+      const key2 = await insertTestAppKey({ appId: "app2", provider: "stripe" });
+
+      expect(key2.id).toBeDefined();
+    });
+
+    it("should allow different providers for same app", async () => {
+      await insertTestAppKey({ appId: "myapp", provider: "stripe" });
+      const key2 = await insertTestAppKey({ appId: "myapp", provider: "openai" });
+
+      expect(key2.id).toBeDefined();
     });
   });
 });
