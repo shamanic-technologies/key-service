@@ -56,7 +56,7 @@ export const byokKeys = pgTable(
     orgId: uuid("org_id")
       .notNull()
       .references(() => orgs.id, { onDelete: "cascade" }),
-    provider: text("provider").notNull(), // 'apollo', 'anthropic'
+    provider: text("provider").notNull(), // 'apollo', 'anthropic', 'instantly', 'firecrawl'
     encryptedKey: text("encrypted_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

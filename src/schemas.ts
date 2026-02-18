@@ -271,7 +271,7 @@ registry.registerPath({
   },
 });
 
-const VALID_PROVIDERS = ["apollo", "anthropic"] as const;
+const VALID_PROVIDERS = ["apollo", "anthropic", "instantly", "firecrawl"] as const;
 
 export const CreateByokKeyRequestSchema = z
   .object({
