@@ -21,7 +21,7 @@ import {
 
 const router = Router();
 
-const VALID_PROVIDERS = ["apollo", "anthropic"];
+const VALID_PROVIDERS = ["apollo", "anthropic", "instantly", "firecrawl"];
 
 // No auth middleware needed - Railway private network
 
