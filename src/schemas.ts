@@ -75,10 +75,17 @@ registry.registerPath({
   method: "get",
   path: "/validate/keys/{provider}",
   summary: "Get decrypted BYOK key for a provider",
+  description:
+    "Requires X-Caller-Service, X-Caller-Method, and X-Caller-Path headers to identify the calling endpoint. These are used to build the provider requirements registry.",
   security: [{ bearerAuth: [] }],
   request: {
     params: z.object({
       provider: z.string(),
+    }),
+    headers: z.object({
+      "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
+      "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
+      "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/leads/search" }),
     }),
   },
   responses: {
@@ -86,6 +93,7 @@ registry.registerPath({
       description: "Decrypted key",
       content: { "application/json": { schema: ValidateKeyResponseSchema } },
     },
+    400: { description: "Missing required caller headers" },
     401: { description: "Unauthorized" },
     404: { description: "Key not configured" },
   },
@@ -358,10 +366,17 @@ registry.registerPath({
   method: "get",
   path: "/internal/keys/{provider}/decrypt",
   summary: "Get decrypted BYOK key (internal service use)",
+  description:
+    "Requires X-Caller-Service, X-Caller-Method, and X-Caller-Path headers to identify the calling endpoint. These are used to build the provider requirements registry.",
   security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({ provider: z.string() }),
     query: ClerkOrgIdQuerySchema,
+    headers: z.object({
+      "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
+      "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
+      "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/leads/search" }),
+    }),
   },
   responses: {
     200: {
@@ -370,7 +385,7 @@ registry.registerPath({
         "application/json": { schema: DecryptByokKeyResponseSchema },
       },
     },
-    400: { description: "Missing clerkOrgId" },
+    400: { description: "Missing clerkOrgId or required caller headers" },
     404: { description: "Key not configured" },
   },
 });
@@ -500,10 +515,17 @@ registry.registerPath({
   method: "get",
   path: "/internal/app-keys/{provider}/decrypt",
   summary: "Get decrypted app key (internal service use)",
+  description:
+    "Requires X-Caller-Service, X-Caller-Method, and X-Caller-Path headers to identify the calling endpoint. These are used to build the provider requirements registry.",
   security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({ provider: z.string() }),
     query: AppIdQuerySchema,
+    headers: z.object({
+      "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
+      "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
+      "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/leads/search" }),
+    }),
   },
   responses: {
     200: {
@@ -512,8 +534,65 @@ registry.registerPath({
         "application/json": { schema: DecryptAppKeyResponseSchema },
       },
     },
-    400: { description: "Missing appId" },
+    400: { description: "Missing appId or required caller headers" },
     404: { description: "Key not configured" },
+  },
+});
+
+// ==================== Provider Requirements ====================
+
+const EndpointSchema = z
+  .object({
+    service: z.string().min(1),
+    method: z.string().min(1),
+    path: z.string().min(1),
+  })
+  .openapi("Endpoint");
+
+export const ProviderRequirementsRequestSchema = z
+  .object({
+    endpoints: z.array(EndpointSchema).min(1),
+  })
+  .openapi("ProviderRequirementsRequest");
+
+const ProviderRequirementItemSchema = z
+  .object({
+    service: z.string(),
+    method: z.string(),
+    path: z.string(),
+    provider: z.string(),
+  })
+  .openapi("ProviderRequirementItem");
+
+const ProviderRequirementsResponseSchema = z
+  .object({
+    requirements: z.array(ProviderRequirementItemSchema),
+    providers: z.array(z.string()),
+  })
+  .openapi("ProviderRequirementsResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/internal/provider-requirements",
+  summary: "Query which providers are needed for a set of endpoints",
+  description:
+    "Given a list of service endpoints (service + method + path), returns which third-party providers each endpoint has been observed requesting. Used by workflow-service to determine which BYOK keys are needed before execution.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: ProviderRequirementsRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Provider requirements for the given endpoints",
+      content: {
+        "application/json": { schema: ProviderRequirementsResponseSchema },
+      },
+    },
+    400: { description: "Invalid request" },
   },
 });
 

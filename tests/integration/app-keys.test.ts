@@ -100,6 +100,12 @@ describe("App Keys endpoints", () => {
   });
 
   describe("GET /internal/app-keys/:provider/decrypt", () => {
+    const callerHeaders = {
+      "x-caller-service": "test-service",
+      "x-caller-method": "POST",
+      "x-caller-path": "/test/endpoint",
+    };
+
     it("should return decrypted key", async () => {
       await request(app)
         .post("/internal/app-keys")
@@ -107,6 +113,7 @@ describe("App Keys endpoints", () => {
 
       const res = await request(app)
         .get("/internal/app-keys/stripe/decrypt")
+        .set(callerHeaders)
         .query({ appId: "myapp" });
 
       expect(res.status).toBe(200);
@@ -117,6 +124,7 @@ describe("App Keys endpoints", () => {
     it("should return 404 for unconfigured provider", async () => {
       const res = await request(app)
         .get("/internal/app-keys/stripe/decrypt")
+        .set(callerHeaders)
         .query({ appId: "myapp" });
 
       expect(res.status).toBe(404);
@@ -124,9 +132,19 @@ describe("App Keys endpoints", () => {
 
     it("should reject missing appId", async () => {
       const res = await request(app)
-        .get("/internal/app-keys/stripe/decrypt");
+        .get("/internal/app-keys/stripe/decrypt")
+        .set(callerHeaders);
 
       expect(res.status).toBe(400);
+    });
+
+    it("should reject missing caller headers", async () => {
+      const res = await request(app)
+        .get("/internal/app-keys/stripe/decrypt")
+        .query({ appId: "myapp" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("X-Caller-Service");
     });
   });
 
@@ -146,6 +164,11 @@ describe("App Keys endpoints", () => {
       // Verify it's gone
       const decryptRes = await request(app)
         .get("/internal/app-keys/stripe/decrypt")
+        .set({
+          "x-caller-service": "test-service",
+          "x-caller-method": "POST",
+          "x-caller-path": "/test/endpoint",
+        })
         .query({ appId: "myapp" });
 
       expect(decryptRes.status).toBe(404);

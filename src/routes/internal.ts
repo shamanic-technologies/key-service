@@ -6,9 +6,11 @@
 import { Router, Request, Response } from "express";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { apiKeys, appKeys, byokKeys, orgs, users } from "../db/schema.js";
+import { apiKeys, appKeys, byokKeys, orgs, users, providerRequirements } from "../db/schema.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/api-key.js";
 import { encrypt, decrypt, maskKey } from "../lib/crypto.js";
+import { extractCallerHeaders } from "../lib/caller-headers.js";
+import { recordProviderRequirement } from "../lib/provider-registry.js";
 import {
   CreateApiKeyRequestSchema,
   DeleteApiKeyRequestSchema,
@@ -17,6 +19,7 @@ import {
   DeleteByokKeyQuerySchema,
   CreateAppKeyRequestSchema,
   DeleteAppKeyQuerySchema,
+  ProviderRequirementsRequestSchema,
 } from "../schemas.js";
 
 const router = Router();
@@ -328,7 +331,7 @@ router.delete("/keys/:provider", async (req: Request, res: Response) => {
 /**
  * GET /internal/keys/:provider/decrypt
  * Get decrypted BYOK key (for internal service use)
- * Called by apollo-service via Railway private network
+ * Requires X-Caller-Service, X-Caller-Method, X-Caller-Path headers
  */
 router.get("/keys/:provider/decrypt", async (req: Request, res: Response) => {
   try {
@@ -337,6 +340,13 @@ router.get("/keys/:provider/decrypt", async (req: Request, res: Response) => {
 
     if (!clerkOrgId) {
       return res.status(400).json({ error: "clerkOrgId required" });
+    }
+
+    const caller = extractCallerHeaders(req);
+    if (!caller) {
+      return res.status(400).json({
+        error: "Missing required headers: X-Caller-Service, X-Caller-Method, X-Caller-Path",
+      });
     }
 
     const orgId = await ensureOrg(clerkOrgId);
@@ -348,6 +358,8 @@ router.get("/keys/:provider/decrypt", async (req: Request, res: Response) => {
     if (!key) {
       return res.status(404).json({ error: `${provider} key not configured` });
     }
+
+    await recordProviderRequirement(caller, provider);
 
     res.json({
       provider,
@@ -465,6 +477,7 @@ router.delete("/app-keys/:provider", async (req: Request, res: Response) => {
 /**
  * GET /internal/app-keys/:provider/decrypt
  * Get decrypted app key (for internal service use)
+ * Requires X-Caller-Service, X-Caller-Method, X-Caller-Path headers
  */
 router.get("/app-keys/:provider/decrypt", async (req: Request, res: Response) => {
   try {
@@ -475,6 +488,13 @@ router.get("/app-keys/:provider/decrypt", async (req: Request, res: Response) =>
       return res.status(400).json({ error: "appId required" });
     }
 
+    const caller = extractCallerHeaders(req);
+    if (!caller) {
+      return res.status(400).json({
+        error: "Missing required headers: X-Caller-Service, X-Caller-Method, X-Caller-Path",
+      });
+    }
+
     const key = await db.query.appKeys.findFirst({
       where: and(eq(appKeys.appId, appId), eq(appKeys.provider, provider)),
     });
@@ -483,12 +503,64 @@ router.get("/app-keys/:provider/decrypt", async (req: Request, res: Response) =>
       return res.status(404).json({ error: `${provider} key not configured for app ${appId}` });
     }
 
+    await recordProviderRequirement(caller, provider);
+
     res.json({
       provider,
       key: decrypt(key.encryptedKey),
     });
   } catch (error) {
     console.error("Decrypt app key error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ==================== PROVIDER REQUIREMENTS ====================
+
+/**
+ * POST /internal/provider-requirements
+ * Query which providers are needed for a set of endpoints
+ */
+router.post("/provider-requirements", async (req: Request, res: Response) => {
+  try {
+    const parsed = ProviderRequirementsRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+    }
+
+    const { endpoints } = parsed.data;
+
+    const results: Array<{
+      service: string;
+      method: string;
+      path: string;
+      provider: string;
+    }> = [];
+
+    for (const endpoint of endpoints) {
+      const matches = await db.query.providerRequirements.findMany({
+        where: and(
+          eq(providerRequirements.service, endpoint.service.toLowerCase()),
+          eq(providerRequirements.method, endpoint.method.toUpperCase()),
+          eq(providerRequirements.path, endpoint.path)
+        ),
+      });
+
+      for (const match of matches) {
+        results.push({
+          service: match.service,
+          method: match.method,
+          path: match.path,
+          provider: match.provider,
+        });
+      }
+    }
+
+    const providers = [...new Set(results.map((r) => r.provider))].sort();
+
+    res.json({ requirements: results, providers });
+  } catch (error) {
+    console.error("Provider requirements query error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
