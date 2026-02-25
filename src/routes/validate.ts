@@ -5,6 +5,8 @@ import { db } from "../db/index.js";
 import { orgs, byokKeys } from "../db/schema.js";
 import { apiKeyAuth, AuthenticatedRequest } from "../middleware/auth.js";
 import { decrypt } from "../lib/crypto.js";
+import { extractCallerHeaders } from "../lib/caller-headers.js";
+import { recordProviderRequirement } from "../lib/provider-registry.js";
 
 const router = Router();
 
@@ -78,11 +80,18 @@ router.get("/validate", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
 
 /**
  * GET /validate/keys/:provider - Get decrypted BYOK key (for MCP internal use)
- * This should only be called from trusted MCP services
+ * Requires X-Caller-Service, X-Caller-Method, X-Caller-Path headers
  */
 router.get("/validate/keys/:provider", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { provider } = req.params;
+
+    const caller = extractCallerHeaders(req);
+    if (!caller) {
+      return res.status(400).json({
+        error: "Missing required headers: X-Caller-Service, X-Caller-Method, X-Caller-Path",
+      });
+    }
 
     const key = await db.query.byokKeys.findFirst({
       where: and(
@@ -95,7 +104,8 @@ router.get("/validate/keys/:provider", apiKeyAuth, async (req: AuthenticatedRequ
       return res.status(404).json({ error: `${provider} key not configured` });
     }
 
-    // Return decrypted key - this is for internal MCP use only
+    await recordProviderRequirement(caller, provider);
+
     res.json({
       provider,
       key: decrypt(key.encryptedKey),

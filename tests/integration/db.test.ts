@@ -3,8 +3,8 @@ import { eq } from "drizzle-orm";
 
 describe("Keys Service Database", async () => {
   const { db, sql } = await import("../../src/db/index.js");
-  const { orgs, apiKeys, appKeys, byokKeys } = await import("../../src/db/schema.js");
-  const { cleanTestData, closeDb, insertTestOrg, insertTestApiKey, insertTestAppKey, insertTestByokKey } = await import("../helpers/test-db.js");
+  const { orgs, apiKeys, appKeys, byokKeys, providerRequirements } = await import("../../src/db/schema.js");
+  const { cleanTestData, closeDb, insertTestOrg, insertTestApiKey, insertTestAppKey, insertTestByokKey, insertTestProviderRequirement } = await import("../helpers/test-db.js");
 
   beforeEach(async () => {
     await cleanTestData();
@@ -137,6 +137,55 @@ describe("Keys Service Database", async () => {
       const key2 = await insertTestAppKey({ appId: "myapp", provider: "openai" });
 
       expect(key2.id).toBeDefined();
+    });
+  });
+
+  describe("providerRequirements table", () => {
+    it("should create a provider requirement", async () => {
+      const req = await insertTestProviderRequirement({
+        service: "apollo",
+        method: "POST",
+        path: "/leads/search",
+        provider: "apollo",
+      });
+
+      expect(req.id).toBeDefined();
+      expect(req.service).toBe("apollo");
+      expect(req.method).toBe("POST");
+      expect(req.path).toBe("/leads/search");
+      expect(req.provider).toBe("apollo");
+    });
+
+    it("should enforce unique service+method+path+provider", async () => {
+      await insertTestProviderRequirement({
+        service: "apollo",
+        method: "POST",
+        path: "/leads/search",
+        provider: "apollo",
+      });
+
+      await expect(
+        insertTestProviderRequirement({
+          service: "apollo",
+          method: "POST",
+          path: "/leads/search",
+          provider: "apollo",
+        })
+      ).rejects.toThrow();
+    });
+
+    it("should allow same endpoint with different providers", async () => {
+      await insertTestProviderRequirement({ provider: "apollo" });
+      const req2 = await insertTestProviderRequirement({ provider: "firecrawl" });
+
+      expect(req2.id).toBeDefined();
+    });
+
+    it("should allow same provider for different endpoints", async () => {
+      await insertTestProviderRequirement({ path: "/leads/search" });
+      const req2 = await insertTestProviderRequirement({ path: "/leads/enrich" });
+
+      expect(req2.id).toBeDefined();
     });
   });
 });

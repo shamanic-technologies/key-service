@@ -93,3 +93,28 @@ export const appKeys = pgTable(
 
 export type AppKey = typeof appKeys.$inferSelect;
 export type NewAppKey = typeof appKeys.$inferInsert;
+
+// Provider requirements registry (auto-discovered from decrypt calls)
+export const providerRequirements = pgTable(
+  "provider_requirements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    service: text("service").notNull(),
+    method: text("method").notNull(),
+    path: text("path").notNull(),
+    provider: text("provider").notNull(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_provider_req_unique").on(
+      table.service,
+      table.method,
+      table.path,
+      table.provider
+    ),
+  ]
+);
+
+export type ProviderRequirement = typeof providerRequirements.$inferSelect;
+export type NewProviderRequirement = typeof providerRequirements.$inferInsert;
