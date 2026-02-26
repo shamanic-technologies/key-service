@@ -17,10 +17,10 @@ describe("Keys Service Database", async () => {
 
   describe("orgs table", () => {
     it("should create and query an org", async () => {
-      const org = await insertTestOrg({ clerkOrgId: "org_test123" });
+      const org = await insertTestOrg({ orgId: "org_test123" });
 
       expect(org.id).toBeDefined();
-      expect(org.clerkOrgId).toBe("org_test123");
+      expect(org.orgId).toBe("org_test123");
     });
   });
 
@@ -82,8 +82,8 @@ describe("Keys Service Database", async () => {
     });
 
     it("should allow same provider for different orgs", async () => {
-      const org1 = await insertTestOrg({ clerkOrgId: "org_1" });
-      const org2 = await insertTestOrg({ clerkOrgId: "org_2" });
+      const org1 = await insertTestOrg({ orgId: "org_1" });
+      const org2 = await insertTestOrg({ orgId: "org_2" });
 
       await insertTestByokKey(org1.id, { provider: "apollo" });
       const key2 = await insertTestByokKey(org2.id, { provider: "apollo" });

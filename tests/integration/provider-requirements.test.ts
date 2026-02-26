@@ -37,7 +37,7 @@ describe("Provider Requirements", () => {
     it("should return 400 without caller headers on BYOK decrypt", async () => {
       const res = await request(app)
         .get("/internal/keys/apollo/decrypt")
-        .query({ clerkOrgId: "org_test" });
+        .query({ orgId: "org_test" });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain("X-Caller-Service");
@@ -47,7 +47,7 @@ describe("Provider Requirements", () => {
       const res = await request(app)
         .get("/internal/keys/apollo/decrypt")
         .set({ "x-caller-service": "apollo" })
-        .query({ clerkOrgId: "org_test" });
+        .query({ orgId: "org_test" });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain("X-Caller-Service");

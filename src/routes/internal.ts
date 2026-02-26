@@ -6,7 +6,7 @@
 import { Router, Request, Response } from "express";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { apiKeys, appKeys, byokKeys, orgs, users, providerRequirements } from "../db/schema.js";
+import { apiKeys, appKeys, byokKeys, orgs, providerRequirements } from "../db/schema.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/api-key.js";
 import { encrypt, decrypt, maskKey } from "../lib/crypto.js";
 import { extractCallerHeaders } from "../lib/caller-headers.js";
@@ -31,15 +31,15 @@ const VALID_PROVIDERS = ["apollo", "anthropic", "instantly", "firecrawl"];
 /**
  * Ensure org exists, creating if needed
  */
-async function ensureOrg(clerkOrgId: string): Promise<string> {
+async function ensureOrg(orgId: string): Promise<string> {
   let org = await db.query.orgs.findFirst({
-    where: eq(orgs.clerkOrgId, clerkOrgId),
+    where: eq(orgs.orgId, orgId),
   });
 
   if (!org) {
     const [newOrg] = await db
       .insert(orgs)
-      .values({ clerkOrgId })
+      .values({ orgId })
       .returning();
     org = newOrg;
   }
@@ -51,17 +51,17 @@ async function ensureOrg(clerkOrgId: string): Promise<string> {
 
 /**
  * GET /internal/api-keys
- * List API keys for an org (by clerkOrgId)
+ * List API keys for an org (by orgId)
  */
 router.get("/api-keys", async (req: Request, res: Response) => {
   try {
-    const { clerkOrgId } = req.query;
+    const { orgId: externalOrgId } = req.query;
 
-    if (!clerkOrgId || typeof clerkOrgId !== "string") {
-      return res.status(400).json({ error: "clerkOrgId required" });
+    if (!externalOrgId || typeof externalOrgId !== "string") {
+      return res.status(400).json({ error: "orgId required" });
     }
 
-    const orgId = await ensureOrg(clerkOrgId);
+    const orgId = await ensureOrg(externalOrgId);
 
     const keys = await db.query.apiKeys.findMany({
       where: eq(apiKeys.orgId, orgId),
@@ -93,8 +93,8 @@ router.post("/api-keys", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
-    const { clerkOrgId, name } = parsed.data;
-    const orgId = await ensureOrg(clerkOrgId);
+    const { orgId: externalOrgId, name } = parsed.data;
+    const orgId = await ensureOrg(externalOrgId);
 
     const rawKey = generateApiKey();
     const keyHash = hashApiKey(rawKey);
@@ -132,11 +132,11 @@ router.delete("/api-keys/:id", async (req: Request, res: Response) => {
     const { id } = req.params;
     const parsed = DeleteApiKeyRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "clerkOrgId required" });
+      return res.status(400).json({ error: "orgId required" });
     }
 
-    const { clerkOrgId } = parsed.data;
-    const orgId = await ensureOrg(clerkOrgId);
+    const { orgId: externalOrgId } = parsed.data;
+    const orgId = await ensureOrg(externalOrgId);
 
     const result = await db
       .delete(apiKeys)
@@ -163,11 +163,11 @@ router.post("/api-keys/session", async (req: Request, res: Response) => {
   try {
     const parsed = SessionApiKeyRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "clerkOrgId required" });
+      return res.status(400).json({ error: "orgId required" });
     }
 
-    const { clerkOrgId } = parsed.data;
-    const orgId = await ensureOrg(clerkOrgId);
+    const { orgId: externalOrgId } = parsed.data;
+    const orgId = await ensureOrg(externalOrgId);
 
     const existing = await db.query.apiKeys.findFirst({
       where: and(eq(apiKeys.orgId, orgId), eq(apiKeys.name, "Default")),
@@ -224,13 +224,13 @@ router.post("/api-keys/session", async (req: Request, res: Response) => {
  */
 router.get("/keys", async (req: Request, res: Response) => {
   try {
-    const { clerkOrgId } = req.query;
+    const { orgId: externalOrgId } = req.query;
 
-    if (!clerkOrgId || typeof clerkOrgId !== "string") {
-      return res.status(400).json({ error: "clerkOrgId required" });
+    if (!externalOrgId || typeof externalOrgId !== "string") {
+      return res.status(400).json({ error: "orgId required" });
     }
 
-    const orgId = await ensureOrg(clerkOrgId);
+    const orgId = await ensureOrg(externalOrgId);
 
     const keys = await db.query.byokKeys.findMany({
       where: eq(byokKeys.orgId, orgId),
@@ -261,8 +261,8 @@ router.post("/keys", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
-    const { clerkOrgId, provider, apiKey } = parsed.data;
-    const orgId = await ensureOrg(clerkOrgId);
+    const { orgId: externalOrgId, provider, apiKey } = parsed.data;
+    const orgId = await ensureOrg(externalOrgId);
     const encryptedKey = encrypt(apiKey);
 
     // Upsert
@@ -303,16 +303,16 @@ router.delete("/keys/:provider", async (req: Request, res: Response) => {
     const { provider } = req.params;
     const parsed = DeleteByokKeyQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      return res.status(400).json({ error: "clerkOrgId required" });
+      return res.status(400).json({ error: "orgId required" });
     }
 
-    const { clerkOrgId } = parsed.data;
+    const { orgId: externalOrgId } = parsed.data;
 
     if (!VALID_PROVIDERS.includes(provider)) {
       return res.status(400).json({ error: "Invalid provider" });
     }
 
-    const orgId = await ensureOrg(clerkOrgId);
+    const orgId = await ensureOrg(externalOrgId);
 
     await db
       .delete(byokKeys)
@@ -336,10 +336,10 @@ router.delete("/keys/:provider", async (req: Request, res: Response) => {
 router.get("/keys/:provider/decrypt", async (req: Request, res: Response) => {
   try {
     const { provider } = req.params;
-    const clerkOrgId = req.query.clerkOrgId as string;
+    const externalOrgId = req.query.orgId as string;
 
-    if (!clerkOrgId) {
-      return res.status(400).json({ error: "clerkOrgId required" });
+    if (!externalOrgId) {
+      return res.status(400).json({ error: "orgId required" });
     }
 
     const caller = extractCallerHeaders(req);
@@ -349,7 +349,7 @@ router.get("/keys/:provider/decrypt", async (req: Request, res: Response) => {
       });
     }
 
-    const orgId = await ensureOrg(clerkOrgId);
+    const orgId = await ensureOrg(externalOrgId);
 
     const key = await db.query.byokKeys.findFirst({
       where: and(eq(byokKeys.orgId, orgId), eq(byokKeys.provider, provider)),
