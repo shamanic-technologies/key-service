@@ -42,9 +42,7 @@ registry.registerPath({
 const ValidateResponseSchema = z
   .object({
     valid: z.boolean(),
-    orgId: z.string().uuid(),
-    clerkOrgId: z.string(),
-    clerkUserId: z.string().nullable(),
+    orgId: z.string(),
     configuredProviders: z.array(z.string()),
   })
   .openapi("ValidateResponse");
@@ -101,11 +99,11 @@ registry.registerPath({
 
 // ==================== Internal: API Keys ====================
 
-const ClerkOrgIdQuerySchema = z
+const OrgIdQuerySchema = z
   .object({
-    clerkOrgId: z.string().min(1),
+    orgId: z.string().min(1),
   })
-  .openapi("ClerkOrgIdQuery");
+  .openapi("OrgIdQuery");
 
 const ApiKeyItemSchema = z
   .object({
@@ -129,20 +127,20 @@ registry.registerPath({
   summary: "List API keys for an org",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    query: ClerkOrgIdQuerySchema,
+    query: OrgIdQuerySchema,
   },
   responses: {
     200: {
       description: "List of API keys",
       content: { "application/json": { schema: ListApiKeysResponseSchema } },
     },
-    400: { description: "Missing clerkOrgId" },
+    400: { description: "Missing orgId" },
   },
 });
 
 export const CreateApiKeyRequestSchema = z
   .object({
-    clerkOrgId: z.string().min(1),
+    orgId: z.string().min(1),
     name: z.string().optional(),
   })
   .openapi("CreateApiKeyRequest");
@@ -178,7 +176,7 @@ registry.registerPath({
 
 export const DeleteApiKeyRequestSchema = z
   .object({
-    clerkOrgId: z.string().min(1),
+    orgId: z.string().min(1),
   })
   .openapi("DeleteApiKeyRequest");
 
@@ -204,14 +202,14 @@ registry.registerPath({
       description: "API key deleted",
       content: { "application/json": { schema: MessageResponseSchema } },
     },
-    400: { description: "Missing clerkOrgId" },
+    400: { description: "Missing orgId" },
     404: { description: "API key not found" },
   },
 });
 
 export const SessionApiKeyRequestSchema = z
   .object({
-    clerkOrgId: z.string().min(1),
+    orgId: z.string().min(1),
   })
   .openapi("SessionApiKeyRequest");
 
@@ -241,7 +239,7 @@ registry.registerPath({
       description: "Session API key",
       content: { "application/json": { schema: SessionApiKeyResponseSchema } },
     },
-    400: { description: "Missing clerkOrgId" },
+    400: { description: "Missing orgId" },
   },
 });
 
@@ -268,14 +266,14 @@ registry.registerPath({
   summary: "List BYOK keys for an org",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    query: ClerkOrgIdQuerySchema,
+    query: OrgIdQuerySchema,
   },
   responses: {
     200: {
       description: "List of BYOK keys",
       content: { "application/json": { schema: ListByokKeysResponseSchema } },
     },
-    400: { description: "Missing clerkOrgId" },
+    400: { description: "Missing orgId" },
   },
 });
 
@@ -283,7 +281,7 @@ const VALID_PROVIDERS = ["apollo", "anthropic", "instantly", "firecrawl"] as con
 
 export const CreateByokKeyRequestSchema = z
   .object({
-    clerkOrgId: z.string().min(1),
+    orgId: z.string().min(1),
     provider: z.enum(VALID_PROVIDERS),
     apiKey: z.string().min(1),
   })
@@ -322,7 +320,7 @@ registry.registerPath({
 
 export const DeleteByokKeyQuerySchema = z
   .object({
-    clerkOrgId: z.string().min(1),
+    orgId: z.string().min(1),
   })
   .openapi("DeleteByokKeyQuery");
 
@@ -371,7 +369,7 @@ registry.registerPath({
   security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({ provider: z.string() }),
-    query: ClerkOrgIdQuerySchema,
+    query: OrgIdQuerySchema,
     headers: z.object({
       "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
       "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
@@ -385,7 +383,7 @@ registry.registerPath({
         "application/json": { schema: DecryptByokKeyResponseSchema },
       },
     },
-    400: { description: "Missing clerkOrgId or required caller headers" },
+    400: { description: "Missing orgId or required caller headers" },
     404: { description: "Key not configured" },
   },
 });
