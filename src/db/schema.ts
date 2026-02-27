@@ -94,6 +94,24 @@ export const appKeys = pgTable(
 export type AppKey = typeof appKeys.$inferSelect;
 export type NewAppKey = typeof appKeys.$inferInsert;
 
+// Platform keys (encrypted third-party API keys for the platform itself, no appId)
+export const platformKeys = pgTable(
+  "platform_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    provider: text("provider").notNull().unique(),
+    encryptedKey: text("encrypted_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_platform_keys_provider").on(table.provider),
+  ]
+);
+
+export type PlatformKey = typeof platformKeys.$inferSelect;
+export type NewPlatformKey = typeof platformKeys.$inferInsert;
+
 // Provider requirements registry (auto-discovered from decrypt calls)
 export const providerRequirements = pgTable(
   "provider_requirements",

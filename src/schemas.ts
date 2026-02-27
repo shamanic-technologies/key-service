@@ -538,6 +538,143 @@ registry.registerPath({
   },
 });
 
+// ==================== Internal: Platform Keys ====================
+
+export const CreatePlatformKeyRequestSchema = z
+  .object({
+    provider: z.string().min(1),
+    apiKey: z.string().min(1),
+  })
+  .openapi("CreatePlatformKeyRequest");
+
+const CreatePlatformKeyResponseSchema = z
+  .object({
+    provider: z.string(),
+    maskedKey: z.string(),
+    message: z.string(),
+  })
+  .openapi("CreatePlatformKeyResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/internal/platform-keys",
+  summary: "Add or update a platform key",
+  description:
+    "Upsert a platform-level API key. Platform keys are global — not tied to any app or org. Typically registered once at deployment.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: CreatePlatformKeyRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Platform key saved",
+      content: {
+        "application/json": { schema: CreatePlatformKeyResponseSchema },
+      },
+    },
+    400: { description: "Invalid request" },
+  },
+});
+
+const PlatformKeyItemSchema = z
+  .object({
+    provider: z.string(),
+    maskedKey: z.string(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+  })
+  .openapi("PlatformKeyItem");
+
+const ListPlatformKeysResponseSchema = z
+  .object({
+    keys: z.array(PlatformKeyItemSchema),
+  })
+  .openapi("ListPlatformKeysResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/internal/platform-keys",
+  summary: "List all platform keys",
+  security: [{ serviceKeyAuth: [] }],
+  responses: {
+    200: {
+      description: "List of platform keys",
+      content: { "application/json": { schema: ListPlatformKeysResponseSchema } },
+    },
+  },
+});
+
+const DecryptPlatformKeyResponseSchema = z
+  .object({
+    provider: z.string(),
+    key: z.string(),
+  })
+  .openapi("DecryptPlatformKeyResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/internal/platform-keys/{provider}/decrypt",
+  summary: "Get decrypted platform key (internal service use)",
+  description:
+    "Returns the decrypted platform-level key for the given provider. No appId or orgId needed — platform keys are global. Requires X-Caller-* headers for provider requirements tracking.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    params: z.object({ provider: z.string() }),
+    headers: z.object({
+      "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
+      "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
+      "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/leads/search" }),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Decrypted key",
+      content: {
+        "application/json": { schema: DecryptPlatformKeyResponseSchema },
+      },
+    },
+    400: { description: "Missing required caller headers" },
+    404: { description: "Key not configured" },
+  },
+});
+
+export const DeletePlatformKeyQuerySchema = z
+  .object({
+    provider: z.string().min(1),
+  })
+  .openapi("DeletePlatformKeyQuery");
+
+const DeletePlatformKeyResponseSchema = z
+  .object({
+    provider: z.string(),
+    message: z.string(),
+  })
+  .openapi("DeletePlatformKeyResponse");
+
+registry.registerPath({
+  method: "delete",
+  path: "/internal/platform-keys/{provider}",
+  summary: "Delete a platform key",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    params: z.object({
+      provider: z.string(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Platform key deleted",
+      content: {
+        "application/json": { schema: DeletePlatformKeyResponseSchema },
+      },
+    },
+  },
+});
+
 // ==================== Provider Requirements ====================
 
 const EndpointSchema = z

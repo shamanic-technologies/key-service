@@ -1,5 +1,5 @@
 import { db, sql } from "../../src/db/index.js";
-import { orgs, users, apiKeys, appKeys, apps, byokKeys, providerRequirements } from "../../src/db/schema.js";
+import { orgs, users, apiKeys, appKeys, apps, byokKeys, platformKeys, providerRequirements } from "../../src/db/schema.js";
 
 /**
  * Clean all test data from the database
@@ -7,6 +7,7 @@ import { orgs, users, apiKeys, appKeys, apps, byokKeys, providerRequirements } f
 export async function cleanTestData() {
   await db.delete(apiKeys);
   await db.delete(appKeys);
+  await db.delete(platformKeys);
   await db.delete(byokKeys);
   await db.delete(providerRequirements);
   await db.delete(apps);
@@ -88,6 +89,22 @@ export async function insertTestAppKey(
     .values({
       appId: data.appId || `test-app-${Date.now()}`,
       provider: data.provider || "stripe",
+      encryptedKey: data.encryptedKey || `encrypted-${Date.now()}`,
+    })
+    .returning();
+  return key;
+}
+
+/**
+ * Insert a test platform key
+ */
+export async function insertTestPlatformKey(
+  data: { provider?: string; encryptedKey?: string } = {}
+) {
+  const [key] = await db
+    .insert(platformKeys)
+    .values({
+      provider: data.provider || "anthropic",
       encryptedKey: data.encryptedKey || `encrypted-${Date.now()}`,
     })
     .returning();
