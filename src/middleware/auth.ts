@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { apiKeys } from "../db/schema.js";
-import { hashApiKey } from "../lib/api-key.js";
+import { apiKeys, apps } from "../db/schema.js";
+import { hashApiKey, isAppApiKey } from "../lib/api-key.js";
 
 export interface AuthenticatedRequest extends Request {
   orgId?: string;
+  appId?: string;
+  authType?: "user_key" | "app_key";
 }
 
 /**
@@ -38,8 +40,9 @@ export function serviceKeyAuth(
 }
 
 /**
- * Authenticate via API key (for MCP/external clients)
- * Called by api-service to validate user API keys
+ * Authenticate via API key (user key or app key)
+ * - User keys (mcpf_*): resolve to orgId
+ * - App keys (mcpf_app_*): resolve to appId
  */
 export async function apiKeyAuth(
   req: AuthenticatedRequest,
@@ -60,6 +63,22 @@ export async function apiKeyAuth(
 
     const keyHash = hashApiKey(key);
 
+    // App keys: look up in apps table
+    if (isAppApiKey(key)) {
+      const app = await db.query.apps.findFirst({
+        where: eq(apps.keyHash, keyHash),
+      });
+
+      if (!app) {
+        return res.status(401).json({ error: "Invalid API key" });
+      }
+
+      req.appId = app.name;
+      req.authType = "app_key";
+      return next();
+    }
+
+    // User keys: look up in apiKeys table
     const apiKey = await db.query.apiKeys.findFirst({
       where: eq(apiKeys.keyHash, keyHash),
     });
@@ -75,6 +94,7 @@ export async function apiKeyAuth(
       .where(eq(apiKeys.id, apiKey.id));
 
     req.orgId = apiKey.orgId;
+    req.authType = "user_key";
     next();
   } catch (error) {
     console.error("API key auth error:", error);

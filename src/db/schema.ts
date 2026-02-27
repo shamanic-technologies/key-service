@@ -118,3 +118,22 @@ export const providerRequirements = pgTable(
 
 export type ProviderRequirement = typeof providerRequirements.$inferSelect;
 export type NewProviderRequirement = typeof providerRequirements.$inferInsert;
+
+// Registered apps (each app gets an API key to authenticate with the platform)
+export const apps = pgTable(
+  "apps",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    keyHash: text("key_hash").notNull(),
+    keyPrefix: text("key_prefix").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_apps_name").on(table.name),
+    uniqueIndex("idx_apps_key_hash").on(table.keyHash),
+  ]
+);
+
+export type App = typeof apps.$inferSelect;
+export type NewApp = typeof apps.$inferInsert;

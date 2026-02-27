@@ -6,8 +6,8 @@
 import { Router, Request, Response } from "express";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { apiKeys, appKeys, byokKeys, orgs, providerRequirements } from "../db/schema.js";
-import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/api-key.js";
+import { apiKeys, appKeys, apps, byokKeys, orgs, providerRequirements } from "../db/schema.js";
+import { generateApiKey, generateAppApiKey, hashApiKey, getKeyPrefix } from "../lib/api-key.js";
 import { encrypt, decrypt, maskKey } from "../lib/crypto.js";
 import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
@@ -20,6 +20,7 @@ import {
   CreateAppKeyRequestSchema,
   DeleteAppKeyQuerySchema,
   ProviderRequirementsRequestSchema,
+  RegisterAppRequestSchema,
 } from "../schemas.js";
 
 const router = Router();
@@ -566,3 +567,56 @@ router.post("/provider-requirements", async (req: Request, res: Response) => {
 });
 
 export default router;
+
+// ==================== APP REGISTRATION ====================
+
+/**
+ * POST /internal/apps
+ * Register a new app and get an App API Key.
+ * Idempotent: if the app already exists, returns its prefix (not the full key).
+ */
+router.post("/apps", async (req: Request, res: Response) => {
+  try {
+    const parsed = RegisterAppRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+    }
+
+    const { name } = parsed.data;
+
+    // Check if app already exists
+    const existing = await db.query.apps.findFirst({
+      where: eq(apps.name, name),
+    });
+
+    if (existing) {
+      return res.json({
+        appId: existing.name,
+        keyPrefix: existing.keyPrefix,
+        created: false,
+        message: "App already registered. API key was returned at creation time.",
+      });
+    }
+
+    // Create new app with API key
+    const rawKey = generateAppApiKey();
+    const keyHash = hashApiKey(rawKey);
+    const keyPrefix = getKeyPrefix(rawKey);
+
+    const [app] = await db
+      .insert(apps)
+      .values({ name, keyHash, keyPrefix })
+      .returning();
+
+    res.json({
+      appId: app.name,
+      apiKey: rawKey,
+      keyPrefix: app.keyPrefix,
+      created: true,
+      message: "App registered. Save this API key — it won't be shown again.",
+    });
+  } catch (error) {
+    console.error("Register app error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
