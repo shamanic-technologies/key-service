@@ -43,6 +43,13 @@
       "when": 1772172926017,
       "tag": "0005_real_hiroim",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772192080558,
+      "tag": "0006_add_platform_keys",
+      "breakpoints": true
     }
   ]
 }

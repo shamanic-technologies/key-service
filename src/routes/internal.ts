@@ -6,7 +6,7 @@
 import { Router, Request, Response } from "express";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { apiKeys, appKeys, apps, byokKeys, orgs, providerRequirements } from "../db/schema.js";
+import { apiKeys, appKeys, apps, byokKeys, orgs, platformKeys, providerRequirements } from "../db/schema.js";
 import { generateApiKey, generateAppApiKey, hashApiKey, getKeyPrefix } from "../lib/api-key.js";
 import { encrypt, decrypt, maskKey } from "../lib/crypto.js";
 import { extractCallerHeaders } from "../lib/caller-headers.js";
@@ -19,6 +19,7 @@ import {
   DeleteByokKeyQuerySchema,
   CreateAppKeyRequestSchema,
   DeleteAppKeyQuerySchema,
+  CreatePlatformKeyRequestSchema,
   ProviderRequirementsRequestSchema,
   RegisterAppRequestSchema,
 } from "../schemas.js";
@@ -512,6 +513,130 @@ router.get("/app-keys/:provider/decrypt", async (req: Request, res: Response) =>
     });
   } catch (error) {
     console.error("Decrypt app key error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ==================== PLATFORM KEYS ====================
+
+/**
+ * GET /internal/platform-keys
+ * List all platform keys
+ */
+router.get("/platform-keys", async (req: Request, res: Response) => {
+  try {
+    const keys = await db.query.platformKeys.findMany();
+
+    const maskedKeys = keys.map((key) => ({
+      provider: key.provider,
+      maskedKey: maskKey(decrypt(key.encryptedKey)),
+      createdAt: key.createdAt,
+      updatedAt: key.updatedAt,
+    }));
+
+    res.json({ keys: maskedKeys });
+  } catch (error) {
+    console.error("List platform keys error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /internal/platform-keys
+ * Add or update a platform key
+ */
+router.post("/platform-keys", async (req: Request, res: Response) => {
+  try {
+    const parsed = CreatePlatformKeyRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+    }
+
+    const { provider, apiKey } = parsed.data;
+    const encryptedKey = encrypt(apiKey);
+
+    // Upsert
+    const existing = await db.query.platformKeys.findFirst({
+      where: eq(platformKeys.provider, provider),
+    });
+
+    if (existing) {
+      await db
+        .update(platformKeys)
+        .set({ encryptedKey, updatedAt: new Date() })
+        .where(eq(platformKeys.id, existing.id));
+    } else {
+      await db.insert(platformKeys).values({
+        provider,
+        encryptedKey,
+      });
+    }
+
+    res.json({
+      provider,
+      maskedKey: maskKey(apiKey),
+      message: `${provider} platform key saved successfully`,
+    });
+  } catch (error) {
+    console.error("Set platform key error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * DELETE /internal/platform-keys/:provider
+ * Delete a platform key
+ */
+router.delete("/platform-keys/:provider", async (req: Request, res: Response) => {
+  try {
+    const { provider } = req.params;
+
+    await db
+      .delete(platformKeys)
+      .where(eq(platformKeys.provider, provider));
+
+    res.json({
+      provider,
+      message: `${provider} platform key deleted successfully`,
+    });
+  } catch (error) {
+    console.error("Delete platform key error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /internal/platform-keys/:provider/decrypt
+ * Get decrypted platform key (for internal service use)
+ * Requires X-Caller-Service, X-Caller-Method, X-Caller-Path headers
+ */
+router.get("/platform-keys/:provider/decrypt", async (req: Request, res: Response) => {
+  try {
+    const { provider } = req.params;
+
+    const caller = extractCallerHeaders(req);
+    if (!caller) {
+      return res.status(400).json({
+        error: "Missing required headers: X-Caller-Service, X-Caller-Method, X-Caller-Path",
+      });
+    }
+
+    const key = await db.query.platformKeys.findFirst({
+      where: eq(platformKeys.provider, provider),
+    });
+
+    if (!key) {
+      return res.status(404).json({ error: `${provider} platform key not configured` });
+    }
+
+    await recordProviderRequirement(caller, provider);
+
+    res.json({
+      provider,
+      key: decrypt(key.encryptedKey),
+    });
+  } catch (error) {
+    console.error("Decrypt platform key error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
