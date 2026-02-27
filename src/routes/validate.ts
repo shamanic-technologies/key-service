@@ -10,10 +10,22 @@ import { recordProviderRequirement } from "../lib/provider-registry.js";
 const router = Router();
 
 /**
- * GET /validate - Validate API key and return org info (for MCP)
+ * GET /validate - Validate API key and return identity info
+ * - User key (mcpf_*): returns { valid, type: "user", orgId, configuredProviders }
+ * - App key (mcpf_app_*): returns { valid, type: "app", appId }
  */
 router.get("/validate", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
   try {
+    // App key: return appId
+    if (req.authType === "app_key") {
+      return res.json({
+        valid: true,
+        type: "app",
+        appId: req.appId,
+      });
+    }
+
+    // User key: return orgId + configured providers
     const org = await db.query.orgs.findFirst({
       where: eq(orgs.id, req.orgId!),
     });
@@ -22,7 +34,6 @@ router.get("/validate", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ error: "Organization not found" });
     }
 
-    // Get configured BYOK keys (just providers, not the actual keys)
     const keys = await db.query.byokKeys.findMany({
       where: eq(byokKeys.orgId, req.orgId!),
     });
@@ -31,6 +42,7 @@ router.get("/validate", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
 
     res.json({
       valid: true,
+      type: "user",
       orgId: org.orgId,
       configuredProviders,
     });
@@ -42,10 +54,14 @@ router.get("/validate", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
 
 /**
  * GET /validate/keys/:provider - Get decrypted BYOK key (for MCP internal use)
- * Requires X-Caller-Service, X-Caller-Method, X-Caller-Path headers
+ * Only works with user keys (not app keys)
  */
 router.get("/validate/keys/:provider", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
   try {
+    if (req.authType === "app_key") {
+      return res.status(400).json({ error: "BYOK key lookup requires a user API key, not an app key" });
+    }
+
     const { provider } = req.params;
 
     const caller = extractCallerHeaders(req);

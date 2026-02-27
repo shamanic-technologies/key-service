@@ -10,10 +10,26 @@ export function generateApiKey(): string {
 }
 
 /**
- * Validate API key format
+ * Generate a new App API key in format: mcpf_app_xxxxxxxxxxxxxxxxxxxx
+ */
+export function generateAppApiKey(): string {
+  const randomBytes = crypto.randomBytes(20);
+  const hex = randomBytes.toString("hex");
+  return `mcpf_app_${hex}`;
+}
+
+/**
+ * Validate API key format (user key)
  */
 export function isValidApiKeyFormat(key: string): boolean {
   return /^mcpf_[a-f0-9]{40}$/.test(key);
+}
+
+/**
+ * Check if key is an app API key
+ */
+export function isAppApiKey(key: string): boolean {
+  return key.startsWith("mcpf_app_");
 }
 
 /**

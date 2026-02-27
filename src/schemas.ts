@@ -39,9 +39,10 @@ registry.registerPath({
 
 // ==================== Validate ====================
 
-const ValidateResponseSchema = z
+export const ValidateResponseSchema = z
   .object({
-    valid: z.boolean(),
+    valid: z.literal(true),
+    type: z.literal("user"),
     orgId: z.string(),
     configuredProviders: z.array(z.string()),
   })
@@ -607,4 +608,69 @@ registry.registerComponent("securitySchemes", "serviceKeyAuth", {
   in: "header",
   name: "x-api-key",
   description: "Service-to-service key (KEY_SERVICE_API_KEY)",
+});
+
+// ==================== Internal: App Registration ====================
+
+export const RegisterAppRequestSchema = z
+  .object({
+    name: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/, "App name must be lowercase alphanumeric with hyphens"),
+  })
+  .openapi("RegisterAppRequest");
+
+const RegisterAppResponseSchema = z
+  .object({
+    appId: z.string(),
+    apiKey: z.string().optional(),
+    keyPrefix: z.string(),
+    created: z.boolean(),
+    message: z.string(),
+  })
+  .openapi("RegisterAppResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/internal/apps",
+  summary: "Register a new app and get an App API Key",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    body: {
+      content: { "application/json": { schema: RegisterAppRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "App registered (or already exists)",
+      content: { "application/json": { schema: RegisterAppResponseSchema } },
+    },
+    400: { description: "Invalid request" },
+  },
+});
+
+// ==================== Validate (updated with type field) ====================
+
+const ValidateAppResponseSchema = z
+  .object({
+    valid: z.literal(true),
+    type: z.literal("app"),
+    appId: z.string(),
+  })
+  .openapi("ValidateAppResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/validate",
+  summary: "Validate API key — returns type 'app' or 'user' with corresponding identity",
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: {
+      description: "API key is valid",
+      content: {
+        "application/json": {
+          schema: z.union([ValidateAppResponseSchema, ValidateResponseSchema]),
+        },
+      },
+    },
+    401: { description: "Unauthorized" },
+  },
 });

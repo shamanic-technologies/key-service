@@ -1,5 +1,5 @@
 import { db, sql } from "../../src/db/index.js";
-import { orgs, users, apiKeys, appKeys, byokKeys, providerRequirements } from "../../src/db/schema.js";
+import { orgs, users, apiKeys, appKeys, apps, byokKeys, providerRequirements } from "../../src/db/schema.js";
 
 /**
  * Clean all test data from the database
@@ -9,6 +9,7 @@ export async function cleanTestData() {
   await db.delete(appKeys);
   await db.delete(byokKeys);
   await db.delete(providerRequirements);
+  await db.delete(apps);
   await db.delete(users);
   await db.delete(orgs);
 }
