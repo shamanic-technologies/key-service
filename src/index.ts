@@ -56,6 +56,11 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 
 // Only start server if not in test environment
 if (process.env.NODE_ENV !== "test") {
+  if (!process.env.KEY_SERVICE_API_KEY?.trim()) {
+    console.error("[KEY SERVICE] FATAL: KEY_SERVICE_API_KEY env var is missing or empty. Cannot start.");
+    process.exit(1);
+  }
+
   migrate(db, { migrationsFolder: "./drizzle" })
     .then(() => {
       console.log("Migrations complete");

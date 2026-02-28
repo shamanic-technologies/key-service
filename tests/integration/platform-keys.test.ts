@@ -109,12 +109,14 @@ describe("Platform Keys endpoints", () => {
       expect(res.body.key).toBe("sk-ant-secret123");
     });
 
-    it("should return 404 for unconfigured provider", async () => {
+    it("should return 404 with clear 'Platform key not found' message", async () => {
       const res = await request(app)
         .get("/internal/platform-keys/anthropic/decrypt")
         .set(callerHeaders);
 
       expect(res.status).toBe(404);
+      expect(res.body.error).toContain("Platform key not found");
+      expect(res.body.error).toContain("anthropic");
     });
 
     it("should reject missing caller headers", async () => {

@@ -358,7 +358,8 @@ router.get("/keys/:provider/decrypt", async (req: Request, res: Response) => {
     });
 
     if (!key) {
-      return res.status(404).json({ error: `${provider} key not configured` });
+      console.warn(`[KEY SERVICE] BYOK key not found: provider=${provider} orgId=${externalOrgId} caller=${caller.service}`);
+      return res.status(404).json({ error: `BYOK key not found: no '${provider}' key configured for org '${externalOrgId}'` });
     }
 
     await recordProviderRequirement(caller, provider);
@@ -368,7 +369,7 @@ router.get("/keys/:provider/decrypt", async (req: Request, res: Response) => {
       key: decrypt(key.encryptedKey),
     });
   } catch (error) {
-    console.error("Decrypt key error:", error);
+    console.error("Decrypt BYOK key error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -502,7 +503,8 @@ router.get("/app-keys/:provider/decrypt", async (req: Request, res: Response) =>
     });
 
     if (!key) {
-      return res.status(404).json({ error: `${provider} key not configured for app ${appId}` });
+      console.warn(`[KEY SERVICE] App key not found: provider=${provider} appId=${appId} caller=${caller.service}`);
+      return res.status(404).json({ error: `App key not found: no '${provider}' key configured for app '${appId}'` });
     }
 
     await recordProviderRequirement(caller, provider);
@@ -626,7 +628,8 @@ router.get("/platform-keys/:provider/decrypt", async (req: Request, res: Respons
     });
 
     if (!key) {
-      return res.status(404).json({ error: `${provider} platform key not configured` });
+      console.warn(`[KEY SERVICE] Platform key not found: provider=${provider} caller=${caller.service}`);
+      return res.status(404).json({ error: `Platform key not found: no '${provider}' platform key configured` });
     }
 
     await recordProviderRequirement(caller, provider);
