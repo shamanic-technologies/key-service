@@ -79,7 +79,7 @@ router.get("/validate/keys/:provider", apiKeyAuth, async (req: AuthenticatedRequ
     });
 
     if (!key) {
-      return res.status(404).json({ error: `${provider} key not configured` });
+      return res.status(404).json({ error: `BYOK key not found: no '${provider}' key configured for this org` });
     }
 
     await recordProviderRequirement(caller, provider);
@@ -89,7 +89,7 @@ router.get("/validate/keys/:provider", apiKeyAuth, async (req: AuthenticatedRequ
       key: decrypt(key.encryptedKey),
     });
   } catch (error) {
-    console.error("Get key error:", error);
+    console.error("Get BYOK key error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
