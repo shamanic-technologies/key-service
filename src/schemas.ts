@@ -43,7 +43,9 @@ export const ValidateResponseSchema = z
   .object({
     valid: z.literal(true),
     type: z.literal("user"),
+    appId: z.string(),
     orgId: z.string(),
+    userId: z.string(),
     configuredProviders: z.array(z.string()),
   })
   .openapi("ValidateResponse");
@@ -98,7 +100,7 @@ registry.registerPath({
   },
 });
 
-// ==================== Internal: API Keys ====================
+// ==================== Internal: Shared ====================
 
 const OrgIdQuerySchema = z
   .object({
@@ -106,11 +108,24 @@ const OrgIdQuerySchema = z
   })
   .openapi("OrgIdQuery");
 
+// ==================== Internal: API Keys ====================
+
+const ListApiKeysQuerySchema = z
+  .object({
+    orgId: z.string().min(1),
+    userId: z.string().uuid().optional(),
+  })
+  .openapi("ListApiKeysQuery");
+
 const ApiKeyItemSchema = z
   .object({
     id: z.string().uuid(),
     keyPrefix: z.string(),
     name: z.string().nullable(),
+    appId: z.string(),
+    orgId: z.string(),
+    userId: z.string(),
+    createdBy: z.string(),
     createdAt: z.coerce.date(),
     lastUsedAt: z.coerce.date().nullable(),
   })
@@ -128,7 +143,7 @@ registry.registerPath({
   summary: "List API keys for an org",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    query: OrgIdQuerySchema,
+    query: ListApiKeysQuerySchema,
   },
   responses: {
     200: {
@@ -141,8 +156,11 @@ registry.registerPath({
 
 export const CreateApiKeyRequestSchema = z
   .object({
+    appId: z.string().min(1),
     orgId: z.string().min(1),
-    name: z.string().optional(),
+    userId: z.string().uuid(),
+    createdBy: z.string().uuid(),
+    name: z.string().min(1),
   })
   .openapi("CreateApiKeyRequest");
 
@@ -150,9 +168,12 @@ const CreateApiKeyResponseSchema = z
   .object({
     id: z.string().uuid(),
     key: z.string(),
-    keyPrefix: z.string(),
-    name: z.string().nullable(),
-    message: z.string(),
+    name: z.string(),
+    appId: z.string(),
+    orgId: z.string(),
+    userId: z.string(),
+    createdBy: z.string(),
+    createdAt: z.coerce.date(),
   })
   .openapi("CreateApiKeyResponse");
 
@@ -210,7 +231,9 @@ registry.registerPath({
 
 export const SessionApiKeyRequestSchema = z
   .object({
+    appId: z.string().min(1),
     orgId: z.string().min(1),
+    userId: z.string().uuid(),
   })
   .openapi("SessionApiKeyRequest");
 

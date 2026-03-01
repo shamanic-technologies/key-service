@@ -25,7 +25,7 @@ router.get("/validate", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    // User key: return orgId + configured providers
+    // User key: return appId + orgId + userId + configured providers
     const org = await db.query.orgs.findFirst({
       where: eq(orgs.id, req.orgId!),
     });
@@ -43,7 +43,9 @@ router.get("/validate", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
     res.json({
       valid: true,
       type: "user",
+      appId: req.appId,
       orgId: org.orgId,
+      userId: req.userId,
       configuredProviders,
     });
   } catch (error) {
