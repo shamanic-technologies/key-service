@@ -50,7 +50,7 @@ describe("User API Keys", () => {
         });
 
       expect(res.status).toBe(200);
-      expect(res.body.key).toMatch(/^mcpf_usr_/);
+      expect(res.body.key).toMatch(/^distrib\.usr_/);
       expect(res.body.name).toBe("Polarity Course — Kevin");
       expect(res.body.appId).toBe("distribute-frontend");
       expect(res.body.orgId).toBe("org-uuid-123");
@@ -131,7 +131,7 @@ describe("User API Keys", () => {
       expect(res.body.keys[0].orgId).toBe("org-list-test");
       expect(res.body.keys[0].userId).toBe(userId);
       expect(res.body.keys[0].createdBy).toBe(userId);
-      expect(res.body.keys[0].keyPrefix).toMatch(/^mcpf_usr_/);
+      expect(res.body.keys[0].keyPrefix).toMatch(/^distrib\.usr_/);
     });
 
     it("should filter by userId", async () => {
@@ -245,7 +245,15 @@ describe("User API Keys", () => {
     it("should reject invalid user key", async () => {
       const res = await request(app)
         .get("/validate")
-        .set("Authorization", "Bearer mcpf_usr_0000000000000000000000000000000000000000");
+        .set("Authorization", "Bearer distrib.usr_0000000000000000000000000000000000000000");
+
+      expect(res.status).toBe(401);
+    });
+
+    it("should reject keys with unrecognized prefix", async () => {
+      const res = await request(app)
+        .get("/validate")
+        .set("Authorization", "Bearer unknown_0000000000000000000000000000000000000000");
 
       expect(res.status).toBe(401);
     });
@@ -265,7 +273,7 @@ describe("User API Keys", () => {
         });
 
       expect(res.status).toBe(200);
-      expect(res.body.key).toMatch(/^mcpf_usr_/);
+      expect(res.body.key).toMatch(/^distrib\.usr_/);
       expect(res.body.name).toBe("Default");
     });
 

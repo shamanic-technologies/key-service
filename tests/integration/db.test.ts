@@ -29,13 +29,13 @@ describe("Keys Service Database", async () => {
       const org = await insertTestOrg();
       const key = await insertTestApiKey(org.id, {
         keyHash: "abc123hash",
-        keyPrefix: "mcpf_abc",
+        keyPrefix: "distrib.usr_",
         name: "Production Key",
       });
 
       expect(key.id).toBeDefined();
       expect(key.keyHash).toBe("abc123hash");
-      expect(key.keyPrefix).toBe("mcpf_abc");
+      expect(key.keyPrefix).toBe("distrib.usr_");
     });
 
     it("should enforce unique keyHash", async () => {

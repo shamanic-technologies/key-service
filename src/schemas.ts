@@ -760,7 +760,7 @@ registry.registerPath({
 registry.registerComponent("securitySchemes", "bearerAuth", {
   type: "http",
   scheme: "bearer",
-  description: "API key (mcpf_*) in Bearer token",
+  description: "API key (distrib.* or legacy mcpf_*) in Bearer token",
 });
 
 registry.registerComponent("securitySchemes", "serviceKeyAuth", {
