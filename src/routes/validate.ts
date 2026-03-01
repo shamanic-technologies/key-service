@@ -11,8 +11,8 @@ const router = Router();
 
 /**
  * GET /validate - Validate API key and return identity info
- * - User key (mcpf_*): returns { valid, type: "user", orgId, configuredProviders }
- * - App key (mcpf_app_*): returns { valid, type: "app", appId }
+ * - User key (distrib.usr_* or legacy mcpf_usr_*): returns { valid, type: "user", orgId, configuredProviders }
+ * - App key (distrib.app_* or legacy mcpf_app_*): returns { valid, type: "app", appId }
  */
 router.get("/validate", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
   try {

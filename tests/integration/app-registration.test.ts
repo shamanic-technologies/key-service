@@ -43,7 +43,7 @@ describe("App Registration", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.appId).toBe("test-app");
-      expect(res.body.apiKey).toMatch(/^mcpf_app_/);
+      expect(res.body.apiKey).toMatch(/^distrib\.app_/);
       expect(res.body.created).toBe(true);
     });
 
@@ -113,7 +113,7 @@ describe("App Registration", () => {
     it("should reject invalid app key", async () => {
       const res = await request(app)
         .get("/validate")
-        .set("Authorization", "Bearer mcpf_app_0000000000000000000000000000000000000000");
+        .set("Authorization", "Bearer distrib.app_0000000000000000000000000000000000000000");
 
       expect(res.status).toBe(401);
     });

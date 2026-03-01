@@ -64,7 +64,7 @@ export async function insertTestApiKey(
       userId: data.userId || crypto.randomUUID(),
       createdBy: data.createdBy || crypto.randomUUID(),
       keyHash: data.keyHash || `hash-${Date.now()}`,
-      keyPrefix: data.keyPrefix || "mcpf_usr_tes",
+      keyPrefix: data.keyPrefix || "distrib.usr_",
       encryptedKey: data.encryptedKey,
       name: data.name || "Test Key",
     })

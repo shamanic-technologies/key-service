@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { apiKeys, apps } from "../db/schema.js";
-import { hashApiKey, isAppApiKey } from "../lib/api-key.js";
+import { hashApiKey, isAppApiKey, hasValidPrefix } from "../lib/api-key.js";
 
 export interface AuthenticatedRequest extends Request {
   orgId?: string;
@@ -48,8 +48,8 @@ export function serviceKeyAuth(
 
 /**
  * Authenticate via API key (user key or app key)
- * - User keys (mcpf_*): resolve to orgId
- * - App keys (mcpf_app_*): resolve to appId
+ * - User keys (distrib.usr_* or legacy mcpf_usr_*): resolve to orgId
+ * - App keys (distrib.app_* or legacy mcpf_app_*): resolve to appId
  */
 export async function apiKeyAuth(
   req: AuthenticatedRequest,
@@ -64,7 +64,7 @@ export async function apiKeyAuth(
 
     const key = authHeader.slice(7);
 
-    if (!key.startsWith("mcpf_")) {
+    if (!hasValidPrefix(key)) {
       return res.status(401).json({ error: "Invalid API key format" });
     }
 
