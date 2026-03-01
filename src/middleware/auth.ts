@@ -7,6 +7,7 @@ import { hashApiKey, isAppApiKey } from "../lib/api-key.js";
 export interface AuthenticatedRequest extends Request {
   orgId?: string;
   appId?: string;
+  userId?: string;
   authType?: "user_key" | "app_key";
 }
 
@@ -100,6 +101,8 @@ export async function apiKeyAuth(
       .where(eq(apiKeys.id, apiKey.id));
 
     req.orgId = apiKey.orgId;
+    req.appId = apiKey.appId;
+    req.userId = apiKey.userId;
     req.authType = "user_key";
     next();
   } catch (error) {

@@ -1,12 +1,12 @@
 import crypto from "crypto";
 
 /**
- * Generate a new API key in format: mcpf_xxxxxxxxxxxxxxxxxxxx
+ * Generate a new user API key in format: mcpf_usr_xxxxxxxxxxxxxxxxxxxx
  */
 export function generateApiKey(): string {
   const randomBytes = crypto.randomBytes(20);
   const hex = randomBytes.toString("hex");
-  return `mcpf_${hex}`;
+  return `mcpf_usr_${hex}`;
 }
 
 /**
@@ -19,10 +19,10 @@ export function generateAppApiKey(): string {
 }
 
 /**
- * Validate API key format (user key)
+ * Validate user API key format
  */
 export function isValidApiKeyFormat(key: string): boolean {
-  return /^mcpf_[a-f0-9]{40}$/.test(key);
+  return /^mcpf_usr_[a-f0-9]{40}$/.test(key);
 }
 
 /**
@@ -30,6 +30,13 @@ export function isValidApiKeyFormat(key: string): boolean {
  */
 export function isAppApiKey(key: string): boolean {
   return key.startsWith("mcpf_app_");
+}
+
+/**
+ * Check if key is a user API key
+ */
+export function isUserApiKey(key: string): boolean {
+  return key.startsWith("mcpf_usr_");
 }
 
 /**

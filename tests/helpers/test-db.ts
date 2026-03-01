@@ -46,14 +46,26 @@ export async function insertTestUser(data: { userId?: string } = {}) {
  */
 export async function insertTestApiKey(
   orgId: string,
-  data: { keyHash?: string; keyPrefix?: string; name?: string } = {}
+  data: {
+    appId?: string;
+    userId?: string;
+    createdBy?: string;
+    keyHash?: string;
+    keyPrefix?: string;
+    encryptedKey?: string;
+    name?: string;
+  } = {}
 ) {
   const [key] = await db
     .insert(apiKeys)
     .values({
+      appId: data.appId || "test-app",
       orgId,
+      userId: data.userId || crypto.randomUUID(),
+      createdBy: data.createdBy || crypto.randomUUID(),
       keyHash: data.keyHash || `hash-${Date.now()}`,
-      keyPrefix: data.keyPrefix || "mcpf_tes",
+      keyPrefix: data.keyPrefix || "mcpf_usr_tes",
+      encryptedKey: data.encryptedKey,
       name: data.name || "Test Key",
     })
     .returning();

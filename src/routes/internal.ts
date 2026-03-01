@@ -53,11 +53,11 @@ async function ensureOrg(orgId: string): Promise<string> {
 
 /**
  * GET /internal/api-keys
- * List API keys for an org (by orgId)
+ * List API keys for an org (by orgId), optionally filtered by userId
  */
 router.get("/api-keys", async (req: Request, res: Response) => {
   try {
-    const { orgId: externalOrgId } = req.query;
+    const { orgId: externalOrgId, userId } = req.query;
 
     if (!externalOrgId || typeof externalOrgId !== "string") {
       return res.status(400).json({ error: "orgId required" });
@@ -65,8 +65,13 @@ router.get("/api-keys", async (req: Request, res: Response) => {
 
     const orgId = await ensureOrg(externalOrgId);
 
+    const conditions = [eq(apiKeys.orgId, orgId)];
+    if (userId && typeof userId === "string") {
+      conditions.push(eq(apiKeys.userId, userId));
+    }
+
     const keys = await db.query.apiKeys.findMany({
-      where: eq(apiKeys.orgId, orgId),
+      where: and(...conditions),
     });
 
     res.json({
@@ -74,6 +79,10 @@ router.get("/api-keys", async (req: Request, res: Response) => {
         id: k.id,
         keyPrefix: k.keyPrefix,
         name: k.name,
+        appId: k.appId,
+        orgId: externalOrgId,
+        userId: k.userId,
+        createdBy: k.createdBy,
         createdAt: k.createdAt,
         lastUsedAt: k.lastUsedAt,
       })),
@@ -86,7 +95,7 @@ router.get("/api-keys", async (req: Request, res: Response) => {
 
 /**
  * POST /internal/api-keys
- * Create a new API key
+ * Create a new user API key (identifies app + org + user)
  */
 router.post("/api-keys", async (req: Request, res: Response) => {
   try {
@@ -95,7 +104,7 @@ router.post("/api-keys", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
-    const { orgId: externalOrgId, name } = parsed.data;
+    const { appId, orgId: externalOrgId, userId, createdBy, name } = parsed.data;
     const orgId = await ensureOrg(externalOrgId);
 
     const rawKey = generateApiKey();
@@ -105,19 +114,25 @@ router.post("/api-keys", async (req: Request, res: Response) => {
     const [apiKey] = await db
       .insert(apiKeys)
       .values({
+        appId,
         orgId,
+        userId,
+        createdBy,
         keyHash,
         keyPrefix,
-        name: name || null,
+        name,
       })
       .returning();
 
     res.json({
       id: apiKey.id,
       key: rawKey,
-      keyPrefix: apiKey.keyPrefix,
       name: apiKey.name,
-      message: "API key created. Save this key - it won't be shown again.",
+      appId: apiKey.appId,
+      orgId: externalOrgId,
+      userId: apiKey.userId,
+      createdBy: apiKey.createdBy,
+      createdAt: apiKey.createdAt,
     });
   } catch (error) {
     console.error("Create API key error:", error);
@@ -158,21 +173,26 @@ router.delete("/api-keys/:id", async (req: Request, res: Response) => {
 
 /**
  * POST /internal/api-keys/session
- * Get or create a "Default" API key for the org.
+ * Get or create a "Default" API key for the app+org+user.
  * Stores the key encrypted so it can be retrieved on future calls.
  */
 router.post("/api-keys/session", async (req: Request, res: Response) => {
   try {
     const parsed = SessionApiKeyRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "orgId required" });
+      return res.status(400).json({ error: "appId, orgId, and userId required" });
     }
 
-    const { orgId: externalOrgId } = parsed.data;
+    const { appId, orgId: externalOrgId, userId } = parsed.data;
     const orgId = await ensureOrg(externalOrgId);
 
     const existing = await db.query.apiKeys.findFirst({
-      where: and(eq(apiKeys.orgId, orgId), eq(apiKeys.name, "Default")),
+      where: and(
+        eq(apiKeys.appId, appId),
+        eq(apiKeys.orgId, orgId),
+        eq(apiKeys.userId, userId),
+        eq(apiKeys.name, "Default"),
+      ),
     });
 
     // Return existing key (decrypt from storage)
@@ -198,7 +218,10 @@ router.post("/api-keys/session", async (req: Request, res: Response) => {
     const [apiKey] = await db
       .insert(apiKeys)
       .values({
+        appId,
         orgId,
+        userId,
+        createdBy: userId,
         keyHash,
         keyPrefix,
         encryptedKey: encrypt(rawKey),

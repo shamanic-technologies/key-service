@@ -28,16 +28,19 @@ export const orgs = pgTable(
   ]
 );
 
-// API keys for org authentication
+// API keys for user authentication (identifies app + org + user)
 export const apiKeys = pgTable(
   "api_keys",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    appId: text("app_id").notNull(),
     orgId: uuid("org_id")
       .notNull()
       .references(() => orgs.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull(),
+    createdBy: uuid("created_by").notNull(),
     keyHash: text("key_hash").notNull().unique(),
-    keyPrefix: text("key_prefix").notNull(), // First 8 chars for display
+    keyPrefix: text("key_prefix").notNull(), // First 12 chars for display
     encryptedKey: text("encrypted_key"), // AES-256-GCM encrypted raw key for retrieval
     name: text("name"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
