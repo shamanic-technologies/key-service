@@ -64,6 +64,13 @@
       "when": 1772611200000,
       "tag": "0008_rename_byok_to_org",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1772697600000,
+      "tag": "0009_remove_appid_add_providers",
+      "breakpoints": true
     }
   ]
 }

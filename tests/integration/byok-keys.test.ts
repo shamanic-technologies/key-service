@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 app.use("/internal", internalRoutes);
 
-describe("BYOK Keys endpoints", () => {
+describe("Org Keys endpoints", () => {
   beforeEach(async () => {
     await cleanTestData();
   });
@@ -19,7 +19,7 @@ describe("BYOK Keys endpoints", () => {
   });
 
   describe("POST /internal/keys", () => {
-    it("should create a new BYOK key", async () => {
+    it("should create a new org key", async () => {
       const res = await request(app)
         .post("/internal/keys")
         .send({ orgId: "org-123", provider: "anthropic", apiKey: "sk-ant-abc123" });
@@ -59,7 +59,7 @@ describe("BYOK Keys endpoints", () => {
   });
 
   describe("GET /internal/keys", () => {
-    it("should list BYOK keys (masked)", async () => {
+    it("should list org keys (masked)", async () => {
       await request(app)
         .post("/internal/keys")
         .send({ orgId: "org-123", provider: "anthropic", apiKey: "sk-ant-abc123xyz" });
@@ -101,7 +101,7 @@ describe("BYOK Keys endpoints", () => {
       "x-caller-path": "/brands/generate",
     };
 
-    it("should return decrypted BYOK key", async () => {
+    it("should return decrypted org key", async () => {
       await request(app)
         .post("/internal/keys")
         .send({ orgId: "org-123", provider: "anthropic", apiKey: "sk-ant-secret123" });
@@ -116,14 +116,14 @@ describe("BYOK Keys endpoints", () => {
       expect(res.body.key).toBe("sk-ant-secret123");
     });
 
-    it("should return 404 with clear 'BYOK key not found' message", async () => {
+    it("should return 404 with clear 'Org key not found' message", async () => {
       const res = await request(app)
         .get("/internal/keys/anthropic/decrypt")
         .set(callerHeaders)
         .query({ orgId: "org-missing" });
 
       expect(res.status).toBe(404);
-      expect(res.body.error).toContain("BYOK key not found");
+      expect(res.body.error).toContain("Org key not found");
       expect(res.body.error).toContain("anthropic");
       expect(res.body.error).toContain("org-missing");
     });
@@ -147,7 +147,7 @@ describe("BYOK Keys endpoints", () => {
   });
 
   describe("DELETE /internal/keys/:provider", () => {
-    it("should delete a BYOK key", async () => {
+    it("should delete an org key", async () => {
       await request(app)
         .post("/internal/keys")
         .send({ orgId: "org-123", provider: "anthropic", apiKey: "sk-ant-abc" });

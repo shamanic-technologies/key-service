@@ -1,8 +1,8 @@
 import { Router, Request, Response } from "express";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { apiKeys, apps, orgs, orgKeys } from "../db/schema.js";
-import { hashApiKey, isAppApiKey, hasValidPrefix } from "../lib/api-key.js";
+import { userAuthKeys, orgKeys, providers } from "../db/schema.js";
+import { hashApiKey, hasValidPrefix } from "../lib/api-key.js";
 import { decrypt } from "../lib/crypto.js";
 import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
@@ -18,38 +18,27 @@ async function resolveApiKey(key: string) {
 
   const keyHash = hashApiKey(key);
 
-  if (isAppApiKey(key)) {
-    const app = await db.query.apps.findFirst({
-      where: eq(apps.keyHash, keyHash),
-    });
-    if (!app) return null;
-    return { authType: "app_key" as const, appId: app.name };
-  }
-
-  const apiKey = await db.query.apiKeys.findFirst({
-    where: eq(apiKeys.keyHash, keyHash),
+  const userKey = await db.query.userAuthKeys.findFirst({
+    where: eq(userAuthKeys.keyHash, keyHash),
   });
-  if (!apiKey) return null;
+  if (!userKey) return null;
 
   // Update last used
   await db
-    .update(apiKeys)
+    .update(userAuthKeys)
     .set({ lastUsedAt: new Date() })
-    .where(eq(apiKeys.id, apiKey.id));
+    .where(eq(userAuthKeys.id, userKey.id));
 
   return {
-    authType: "user_key" as const,
-    appId: apiKey.appId,
-    orgId: apiKey.orgId,
-    userId: apiKey.userId,
+    orgId: userKey.orgId,
+    userId: userKey.userId,
   };
 }
 
 /**
  * GET /validate?key=distrib.usr_xxx - Validate API key and return identity info
  * Auth: serviceKeyAuth (X-API-Key)
- * - User key: returns { valid, type: "user", appId, orgId, userId, configuredProviders }
- * - App key: returns { valid, type: "app", appId }
+ * Returns: { valid, type: "user", orgId, userId, configuredProviders }
  */
 router.get("/validate", async (req: Request, res: Response) => {
   try {
@@ -63,34 +52,27 @@ router.get("/validate", async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Invalid API key" });
     }
 
-    if (identity.authType === "app_key") {
-      return res.json({
-        valid: true,
-        type: "app",
-        appId: identity.appId,
-      });
-    }
-
-    // User key: return appId + orgId + userId + configured providers
-    const org = await db.query.orgs.findFirst({
-      where: eq(orgs.id, identity.orgId!),
-    });
-
-    if (!org) {
-      return res.status(404).json({ error: "Organization not found" });
-    }
-
+    // Get configured org providers
     const keys = await db.query.orgKeys.findMany({
-      where: eq(orgKeys.orgId, identity.orgId!),
+      where: eq(orgKeys.orgId, identity.orgId),
+      with: { },
     });
 
-    const configuredProviders = keys.map((k) => k.provider);
+    // Resolve provider names
+    const configuredProviders: string[] = [];
+    for (const k of keys) {
+      const provider = await db.query.providers.findFirst({
+        where: eq(providers.id, k.providerId),
+      });
+      if (provider) {
+        configuredProviders.push(provider.name);
+      }
+    }
 
     res.json({
       valid: true,
       type: "user",
-      appId: identity.appId,
-      orgId: org.orgId,
+      orgId: identity.orgId,
       userId: identity.userId,
       configuredProviders,
     });
@@ -101,9 +83,8 @@ router.get("/validate", async (req: Request, res: Response) => {
 });
 
 /**
- * GET /validate/keys/:provider?key=distrib.usr_xxx - Get decrypted BYOK key
+ * GET /validate/keys/:provider?key=distrib.usr_xxx - Get decrypted org key
  * Auth: serviceKeyAuth (X-API-Key)
- * Only works with user keys (not app keys)
  */
 router.get("/validate/keys/:provider", async (req: Request, res: Response) => {
   try {
@@ -117,11 +98,7 @@ router.get("/validate/keys/:provider", async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Invalid API key" });
     }
 
-    if (identity.authType === "app_key") {
-      return res.status(400).json({ error: "BYOK key lookup requires a user API key, not an app key" });
-    }
-
-    const { provider } = req.params;
+    const { provider: providerName } = req.params;
 
     const caller = extractCallerHeaders(req);
     if (!caller) {
@@ -130,25 +107,34 @@ router.get("/validate/keys/:provider", async (req: Request, res: Response) => {
       });
     }
 
+    // Resolve provider name to ID
+    const provider = await db.query.providers.findFirst({
+      where: eq(providers.name, providerName),
+    });
+
+    if (!provider) {
+      return res.status(404).json({ error: `Key not found: no '${providerName}' key configured for this org` });
+    }
+
     const orgKey = await db.query.orgKeys.findFirst({
       where: and(
-        eq(orgKeys.orgId, identity.orgId!),
-        eq(orgKeys.provider, provider)
+        eq(orgKeys.orgId, identity.orgId),
+        eq(orgKeys.providerId, provider.id)
       ),
     });
 
     if (!orgKey) {
-      return res.status(404).json({ error: `BYOK key not found: no '${provider}' key configured for this org` });
+      return res.status(404).json({ error: `Key not found: no '${providerName}' key configured for this org` });
     }
 
-    await recordProviderRequirement(caller, provider);
+    await recordProviderRequirement(caller, providerName);
 
     res.json({
-      provider,
+      provider: providerName,
       key: decrypt(orgKey.encryptedKey),
     });
   } catch (error) {
-    console.error("Get BYOK key error:", error);
+    console.error("Get org key error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

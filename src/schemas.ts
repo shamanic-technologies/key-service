@@ -43,7 +43,6 @@ export const ValidateResponseSchema = z
   .object({
     valid: z.literal(true),
     type: z.literal("user"),
-    appId: z.string(),
     orgId: z.string(),
     userId: z.string(),
     configuredProviders: z.array(z.string()),
@@ -52,7 +51,7 @@ export const ValidateResponseSchema = z
 
 const ValidateKeyQuerySchema = z
   .object({
-    key: z.string().min(1).openapi({ description: "The API key to validate (distrib.usr_* or distrib.app_*)", example: "distrib.usr_abc123" }),
+    key: z.string().min(1).openapi({ description: "The API key to validate (distrib.usr_*)", example: "distrib.usr_abc123" }),
   })
   .openapi("ValidateKeyQuery");
 
@@ -65,8 +64,29 @@ const ValidateKeyResponseSchema = z
 
 registry.registerPath({
   method: "get",
+  path: "/validate",
+  summary: "Validate API key — returns user identity",
+  description: "Pass the API key to validate as ?key= query parameter. Authenticated via X-API-Key (service key).",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    query: ValidateKeyQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "API key is valid",
+      content: {
+        "application/json": { schema: ValidateResponseSchema },
+      },
+    },
+    400: { description: "Missing key parameter" },
+    401: { description: "Unauthorized" },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/validate/keys/{provider}",
-  summary: "Get decrypted BYOK key for a provider",
+  summary: "Get decrypted org key for a provider",
   description:
     "Pass the user's API key as ?key= query parameter. Requires X-Caller-Service, X-Caller-Method, and X-Caller-Path headers to identify the calling endpoint. These are used to build the provider requirements registry.",
   security: [{ serviceKeyAuth: [] }],
@@ -100,99 +120,96 @@ const OrgIdQuerySchema = z
   })
   .openapi("OrgIdQuery");
 
-// ==================== Internal: API Keys ====================
+// ==================== Internal: User Auth Keys ====================
 
-const ListApiKeysQuerySchema = z
+const ListUserAuthKeysQuerySchema = z
   .object({
     orgId: z.string().min(1),
-    userId: z.string().uuid().optional(),
+    userId: z.string().optional(),
   })
-  .openapi("ListApiKeysQuery");
+  .openapi("ListUserAuthKeysQuery");
 
-const ApiKeyItemSchema = z
+const UserAuthKeyItemSchema = z
   .object({
     id: z.string().uuid(),
     keyPrefix: z.string(),
     name: z.string().nullable(),
-    appId: z.string(),
     orgId: z.string(),
     userId: z.string(),
     createdBy: z.string(),
     createdAt: z.coerce.date(),
     lastUsedAt: z.coerce.date().nullable(),
   })
-  .openapi("ApiKeyItem");
+  .openapi("UserAuthKeyItem");
 
-const ListApiKeysResponseSchema = z
+const ListUserAuthKeysResponseSchema = z
   .object({
-    keys: z.array(ApiKeyItemSchema),
+    keys: z.array(UserAuthKeyItemSchema),
   })
-  .openapi("ListApiKeysResponse");
+  .openapi("ListUserAuthKeysResponse");
 
 registry.registerPath({
   method: "get",
   path: "/internal/api-keys",
-  summary: "List API keys for an org",
+  summary: "List user auth keys for an org",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    query: ListApiKeysQuerySchema,
+    query: ListUserAuthKeysQuerySchema,
   },
   responses: {
     200: {
-      description: "List of API keys",
-      content: { "application/json": { schema: ListApiKeysResponseSchema } },
+      description: "List of user auth keys",
+      content: { "application/json": { schema: ListUserAuthKeysResponseSchema } },
     },
     400: { description: "Missing orgId" },
   },
 });
 
-export const CreateApiKeyRequestSchema = z
+export const CreateUserAuthKeyRequestSchema = z
   .object({
-    appId: z.string().min(1),
     orgId: z.string().min(1),
-    userId: z.string().uuid(),
-    createdBy: z.string().uuid(),
+    userId: z.string().min(1),
+    createdBy: z.string().min(1),
     name: z.string().min(1),
   })
-  .openapi("CreateApiKeyRequest");
+  .openapi("CreateUserAuthKeyRequest");
 
-const CreateApiKeyResponseSchema = z
+const CreateUserAuthKeyResponseSchema = z
   .object({
     id: z.string().uuid(),
     key: z.string(),
     name: z.string(),
-    appId: z.string(),
     orgId: z.string(),
     userId: z.string(),
     createdBy: z.string(),
     createdAt: z.coerce.date(),
   })
-  .openapi("CreateApiKeyResponse");
+  .openapi("CreateUserAuthKeyResponse");
 
 registry.registerPath({
   method: "post",
   path: "/internal/api-keys",
-  summary: "Create a new API key",
+  summary: "Create a new user auth key",
   security: [{ serviceKeyAuth: [] }],
   request: {
     body: {
-      content: { "application/json": { schema: CreateApiKeyRequestSchema } },
+      content: { "application/json": { schema: CreateUserAuthKeyRequestSchema } },
     },
   },
   responses: {
     200: {
-      description: "API key created",
-      content: { "application/json": { schema: CreateApiKeyResponseSchema } },
+      description: "User auth key created",
+      content: { "application/json": { schema: CreateUserAuthKeyResponseSchema } },
     },
     400: { description: "Invalid request" },
   },
 });
 
-export const DeleteApiKeyRequestSchema = z
+export const DeleteUserAuthKeyRequestSchema = z
   .object({
     orgId: z.string().min(1),
   })
-  .openapi("DeleteApiKeyRequest");
+  .openapi("DeleteUserAuthKeyRequest");
 
 const MessageResponseSchema = z
   .object({
@@ -203,338 +220,186 @@ const MessageResponseSchema = z
 registry.registerPath({
   method: "delete",
   path: "/internal/api-keys/{id}",
-  summary: "Delete an API key",
+  summary: "Delete a user auth key",
   security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({ id: z.string().uuid() }),
     body: {
-      content: { "application/json": { schema: DeleteApiKeyRequestSchema } },
+      content: { "application/json": { schema: DeleteUserAuthKeyRequestSchema } },
     },
   },
   responses: {
     200: {
-      description: "API key deleted",
+      description: "User auth key deleted",
       content: { "application/json": { schema: MessageResponseSchema } },
     },
     400: { description: "Missing orgId" },
-    404: { description: "API key not found" },
+    404: { description: "Key not found" },
   },
 });
 
-export const SessionApiKeyRequestSchema = z
+export const SessionKeyRequestSchema = z
   .object({
-    appId: z.string().min(1),
     orgId: z.string().min(1),
-    userId: z.string().uuid(),
+    userId: z.string().min(1),
   })
-  .openapi("SessionApiKeyRequest");
+  .openapi("SessionKeyRequest");
 
-const SessionApiKeyResponseSchema = z
+const SessionKeyResponseSchema = z
   .object({
     id: z.string().uuid(),
     key: z.string(),
     keyPrefix: z.string(),
     name: z.string().nullable(),
   })
-  .openapi("SessionApiKeyResponse");
+  .openapi("SessionKeyResponse");
 
 registry.registerPath({
   method: "post",
   path: "/internal/api-keys/session",
-  summary: "Get or create a default API key for the org",
+  summary: "Get or create a default user auth key for the org+user",
   security: [{ serviceKeyAuth: [] }],
   request: {
     body: {
       content: {
-        "application/json": { schema: SessionApiKeyRequestSchema },
+        "application/json": { schema: SessionKeyRequestSchema },
       },
     },
   },
   responses: {
     200: {
-      description: "Session API key",
-      content: { "application/json": { schema: SessionApiKeyResponseSchema } },
+      description: "Session key",
+      content: { "application/json": { schema: SessionKeyResponseSchema } },
     },
-    400: { description: "Missing orgId" },
+    400: { description: "Missing orgId or userId" },
   },
 });
 
-// ==================== Internal: BYOK Keys ====================
+// ==================== Internal: Org Keys ====================
 
-const ByokKeyItemSchema = z
+const OrgKeyItemSchema = z
   .object({
     provider: z.string(),
     maskedKey: z.string(),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
   })
-  .openapi("ByokKeyItem");
+  .openapi("OrgKeyItem");
 
-const ListByokKeysResponseSchema = z
+const ListOrgKeysResponseSchema = z
   .object({
-    keys: z.array(ByokKeyItemSchema),
+    keys: z.array(OrgKeyItemSchema),
   })
-  .openapi("ListByokKeysResponse");
+  .openapi("ListOrgKeysResponse");
 
 registry.registerPath({
   method: "get",
   path: "/internal/keys",
-  summary: "List BYOK keys for an org",
+  summary: "List org keys for an org",
   security: [{ serviceKeyAuth: [] }],
   request: {
     query: OrgIdQuerySchema,
   },
   responses: {
     200: {
-      description: "List of BYOK keys",
-      content: { "application/json": { schema: ListByokKeysResponseSchema } },
+      description: "List of org keys",
+      content: { "application/json": { schema: ListOrgKeysResponseSchema } },
     },
     400: { description: "Missing orgId" },
   },
 });
 
-const VALID_PROVIDERS = ["apollo", "anthropic", "instantly", "firecrawl"] as const;
-
-export const CreateByokKeyRequestSchema = z
+export const CreateOrgKeyRequestSchema = z
   .object({
     orgId: z.string().min(1),
-    provider: z.enum(VALID_PROVIDERS),
+    provider: z.string().min(1),
     apiKey: z.string().min(1),
   })
-  .openapi("CreateByokKeyRequest");
+  .openapi("CreateOrgKeyRequest");
 
-const CreateByokKeyResponseSchema = z
+const CreateOrgKeyResponseSchema = z
   .object({
     provider: z.string(),
     maskedKey: z.string(),
     message: z.string(),
   })
-  .openapi("CreateByokKeyResponse");
+  .openapi("CreateOrgKeyResponse");
 
 registry.registerPath({
   method: "post",
   path: "/internal/keys",
-  summary: "Add or update a BYOK key",
+  summary: "Add or update an org key",
   security: [{ serviceKeyAuth: [] }],
   request: {
     body: {
       content: {
-        "application/json": { schema: CreateByokKeyRequestSchema },
+        "application/json": { schema: CreateOrgKeyRequestSchema },
       },
     },
   },
   responses: {
     200: {
-      description: "BYOK key saved",
+      description: "Org key saved",
       content: {
-        "application/json": { schema: CreateByokKeyResponseSchema },
+        "application/json": { schema: CreateOrgKeyResponseSchema },
       },
     },
     400: { description: "Invalid request" },
   },
 });
 
-export const DeleteByokKeyQuerySchema = z
+export const DeleteOrgKeyQuerySchema = z
   .object({
     orgId: z.string().min(1),
   })
-  .openapi("DeleteByokKeyQuery");
+  .openapi("DeleteOrgKeyQuery");
 
-const DeleteByokKeyResponseSchema = z
+const DeleteOrgKeyResponseSchema = z
   .object({
     provider: z.string(),
     message: z.string(),
   })
-  .openapi("DeleteByokKeyResponse");
+  .openapi("DeleteOrgKeyResponse");
 
 registry.registerPath({
   method: "delete",
   path: "/internal/keys/{provider}",
-  summary: "Delete a BYOK key",
-  security: [{ serviceKeyAuth: [] }],
-  request: {
-    params: z.object({
-      provider: z.enum(VALID_PROVIDERS),
-    }),
-    query: DeleteByokKeyQuerySchema,
-  },
-  responses: {
-    200: {
-      description: "BYOK key deleted",
-      content: {
-        "application/json": { schema: DeleteByokKeyResponseSchema },
-      },
-    },
-    400: { description: "Invalid request" },
-  },
-});
-
-const DecryptByokKeyResponseSchema = z
-  .object({
-    provider: z.string(),
-    key: z.string(),
-  })
-  .openapi("DecryptByokKeyResponse");
-
-registry.registerPath({
-  method: "get",
-  path: "/internal/keys/{provider}/decrypt",
-  summary: "Get decrypted BYOK key (internal service use)",
-  description:
-    "Requires X-Caller-Service, X-Caller-Method, and X-Caller-Path headers to identify the calling endpoint. These are used to build the provider requirements registry.",
-  security: [{ serviceKeyAuth: [] }],
-  request: {
-    params: z.object({ provider: z.string() }),
-    query: OrgIdQuerySchema,
-    headers: z.object({
-      "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
-      "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
-      "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/leads/search" }),
-    }),
-  },
-  responses: {
-    200: {
-      description: "Decrypted key",
-      content: {
-        "application/json": { schema: DecryptByokKeyResponseSchema },
-      },
-    },
-    400: { description: "Missing orgId or required caller headers" },
-    404: { description: "Key not configured" },
-  },
-});
-
-// ==================== Internal: App Keys ====================
-
-const AppIdQuerySchema = z
-  .object({
-    appId: z.string().min(1),
-  })
-  .openapi("AppIdQuery");
-
-const AppKeyItemSchema = z
-  .object({
-    provider: z.string(),
-    maskedKey: z.string(),
-    createdAt: z.coerce.date(),
-    updatedAt: z.coerce.date(),
-  })
-  .openapi("AppKeyItem");
-
-const ListAppKeysResponseSchema = z
-  .object({
-    keys: z.array(AppKeyItemSchema),
-  })
-  .openapi("ListAppKeysResponse");
-
-registry.registerPath({
-  method: "get",
-  path: "/internal/app-keys",
-  summary: "List app keys for an app",
-  security: [{ serviceKeyAuth: [] }],
-  request: {
-    query: AppIdQuerySchema,
-  },
-  responses: {
-    200: {
-      description: "List of app keys",
-      content: { "application/json": { schema: ListAppKeysResponseSchema } },
-    },
-    400: { description: "Missing appId" },
-  },
-});
-
-export const CreateAppKeyRequestSchema = z
-  .object({
-    appId: z.string().min(1),
-    provider: z.string().min(1),
-    apiKey: z.string().min(1),
-  })
-  .openapi("CreateAppKeyRequest");
-
-const CreateAppKeyResponseSchema = z
-  .object({
-    provider: z.string(),
-    maskedKey: z.string(),
-    message: z.string(),
-  })
-  .openapi("CreateAppKeyResponse");
-
-registry.registerPath({
-  method: "post",
-  path: "/internal/app-keys",
-  summary: "Add or update an app key",
-  security: [{ serviceKeyAuth: [] }],
-  request: {
-    body: {
-      content: {
-        "application/json": { schema: CreateAppKeyRequestSchema },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: "App key saved",
-      content: {
-        "application/json": { schema: CreateAppKeyResponseSchema },
-      },
-    },
-    400: { description: "Invalid request" },
-  },
-});
-
-export const DeleteAppKeyQuerySchema = z
-  .object({
-    appId: z.string().min(1),
-  })
-  .openapi("DeleteAppKeyQuery");
-
-const DeleteAppKeyResponseSchema = z
-  .object({
-    provider: z.string(),
-    message: z.string(),
-  })
-  .openapi("DeleteAppKeyResponse");
-
-registry.registerPath({
-  method: "delete",
-  path: "/internal/app-keys/{provider}",
-  summary: "Delete an app key",
+  summary: "Delete an org key",
   security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({
       provider: z.string(),
     }),
-    query: DeleteAppKeyQuerySchema,
+    query: DeleteOrgKeyQuerySchema,
   },
   responses: {
     200: {
-      description: "App key deleted",
+      description: "Org key deleted",
       content: {
-        "application/json": { schema: DeleteAppKeyResponseSchema },
+        "application/json": { schema: DeleteOrgKeyResponseSchema },
       },
     },
     400: { description: "Invalid request" },
   },
 });
 
-const DecryptAppKeyResponseSchema = z
+const DecryptOrgKeyResponseSchema = z
   .object({
     provider: z.string(),
     key: z.string(),
   })
-  .openapi("DecryptAppKeyResponse");
+  .openapi("DecryptOrgKeyResponse");
 
 registry.registerPath({
   method: "get",
-  path: "/internal/app-keys/{provider}/decrypt",
-  summary: "Get decrypted app key (internal service use)",
+  path: "/internal/keys/{provider}/decrypt",
+  summary: "Get decrypted org key (internal service use)",
   description:
     "Requires X-Caller-Service, X-Caller-Method, and X-Caller-Path headers to identify the calling endpoint. These are used to build the provider requirements registry.",
   security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({ provider: z.string() }),
-    query: AppIdQuerySchema,
+    query: OrgIdQuerySchema,
     headers: z.object({
       "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
       "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
@@ -545,10 +410,10 @@ registry.registerPath({
     200: {
       description: "Decrypted key",
       content: {
-        "application/json": { schema: DecryptAppKeyResponseSchema },
+        "application/json": { schema: DecryptOrgKeyResponseSchema },
       },
     },
-    400: { description: "Missing appId or required caller headers" },
+    400: { description: "Missing orgId or required caller headers" },
     404: { description: "Key not configured" },
   },
 });
@@ -575,7 +440,7 @@ registry.registerPath({
   path: "/internal/platform-keys",
   summary: "Add or update a platform key",
   description:
-    "Upsert a platform-level API key. Platform keys are global — not tied to any app or org. Typically registered once at deployment.",
+    "Upsert a platform-level API key. Platform keys are global — not tied to any org. Typically registered once at deployment.",
   security: [{ serviceKeyAuth: [] }],
   request: {
     body: {
@@ -635,7 +500,7 @@ registry.registerPath({
   path: "/internal/platform-keys/{provider}/decrypt",
   summary: "Get decrypted platform key (internal service use)",
   description:
-    "Returns the decrypted platform-level key for the given provider. No appId or orgId needed — platform keys are global. Requires X-Caller-* headers for provider requirements tracking.",
+    "Returns the decrypted platform-level key for the given provider. No orgId needed — platform keys are global. Requires X-Caller-* headers for provider requirements tracking.",
   security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({ provider: z.string() }),
@@ -727,7 +592,7 @@ registry.registerPath({
   path: "/internal/provider-requirements",
   summary: "Query which providers are needed for a set of endpoints",
   description:
-    "Given a list of service endpoints (service + method + path), returns which third-party providers each endpoint has been observed requesting. Used by workflow-service to determine which BYOK keys are needed before execution.",
+    "Given a list of service endpoints (service + method + path), returns which third-party providers each endpoint has been observed requesting. Used by workflow-service to determine which keys are needed before execution.",
   security: [{ serviceKeyAuth: [] }],
   request: {
     body: {
@@ -756,85 +621,14 @@ registry.registerComponent("securitySchemes", "serviceKeyAuth", {
   description: "Service-to-service key (KEY_SERVICE_API_KEY)",
 });
 
-// ==================== Internal: App Registration ====================
-
-export const RegisterAppRequestSchema = z
-  .object({
-    name: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/, "App name must be lowercase alphanumeric with hyphens"),
-  })
-  .openapi("RegisterAppRequest");
-
-const RegisterAppResponseSchema = z
-  .object({
-    appId: z.string(),
-    apiKey: z.string().optional(),
-    keyPrefix: z.string(),
-    created: z.boolean(),
-    message: z.string(),
-  })
-  .openapi("RegisterAppResponse");
-
-registry.registerPath({
-  method: "post",
-  path: "/internal/apps",
-  summary: "Register a new app and get an App API Key",
-  security: [{ serviceKeyAuth: [] }],
-  request: {
-    body: {
-      content: { "application/json": { schema: RegisterAppRequestSchema } },
-    },
-  },
-  responses: {
-    200: {
-      description: "App registered (or already exists)",
-      content: { "application/json": { schema: RegisterAppResponseSchema } },
-    },
-    400: { description: "Invalid request" },
-  },
-});
-
-// ==================== Validate (updated with type field) ====================
-
-const ValidateAppResponseSchema = z
-  .object({
-    valid: z.literal(true),
-    type: z.literal("app"),
-    appId: z.string(),
-  })
-  .openapi("ValidateAppResponse");
-
-registry.registerPath({
-  method: "get",
-  path: "/validate",
-  summary: "Validate API key — returns type 'app' or 'user' with corresponding identity",
-  description: "Pass the API key to validate as ?key= query parameter. Authenticated via X-API-Key (service key).",
-  security: [{ serviceKeyAuth: [] }],
-  request: {
-    query: ValidateKeyQuerySchema,
-  },
-  responses: {
-    200: {
-      description: "API key is valid",
-      content: {
-        "application/json": {
-          schema: z.union([ValidateAppResponseSchema, ValidateResponseSchema]),
-        },
-      },
-    },
-    400: { description: "Missing key parameter" },
-    401: { description: "Unauthorized" },
-  },
-});
-
 // ==================== Unified Key Endpoints (/keys) ====================
 
-export const KeySourceSchema = z.enum(["org", "app", "platform", "byok"]);
+export const KeySourceSchema = z.enum(["org", "platform", "byok"]);
 
 export const ListKeysQuerySchema = z
   .object({
     keySource: KeySourceSchema,
     orgId: z.string().min(1).optional(),
-    appId: z.string().min(1).optional(),
   })
   .openapi("ListKeysQuery");
 
@@ -858,7 +652,7 @@ registry.registerPath({
   path: "/keys",
   summary: "List keys by source",
   description:
-    "List stored keys filtered by keySource. Use keySource=org (requires orgId), keySource=app (requires appId), or keySource=platform (no scope).",
+    "List stored keys filtered by keySource. Use keySource=org (requires orgId) or keySource=platform (no scope).",
   security: [{ serviceKeyAuth: [] }],
   request: {
     query: ListKeysQuerySchema,
@@ -878,16 +672,14 @@ export const UpsertKeyRequestSchema = z
     provider: z.string().min(1),
     apiKey: z.string().min(1),
     orgId: z.string().min(1).optional(),
-    appId: z.string().min(1).optional(),
   })
   .refine(
     (data) => {
       const source = data.keySource === "byok" ? "org" : data.keySource;
       if (source === "org") return !!data.orgId;
-      if (source === "app") return !!data.appId;
       return true;
     },
-    { message: "orgId required for keySource 'org', appId required for keySource 'app'" }
+    { message: "orgId required for keySource 'org'" }
   )
   .openapi("UpsertKeyRequest");
 
@@ -904,7 +696,7 @@ registry.registerPath({
   path: "/keys",
   summary: "Add or update a key",
   description:
-    "Upsert a key. keySource determines scope: org (requires orgId), app (requires appId), platform (no scope). 'byok' is accepted as alias for 'org'.",
+    "Upsert a key. keySource determines scope: org (requires orgId), platform (no scope). 'byok' is accepted as alias for 'org'.",
   security: [{ serviceKeyAuth: [] }],
   request: {
     body: {
@@ -924,7 +716,6 @@ export const DeleteKeyQuerySchema = z
   .object({
     keySource: KeySourceSchema,
     orgId: z.string().min(1).optional(),
-    appId: z.string().min(1).optional(),
   })
   .openapi("DeleteKeyQuery");
 
@@ -940,7 +731,7 @@ registry.registerPath({
   path: "/keys/{provider}",
   summary: "Delete a key",
   description:
-    "Delete a key by provider. keySource determines scope: org (requires orgId), app (requires appId), platform (no scope).",
+    "Delete a key by provider. keySource determines scope: org (requires orgId), platform (no scope).",
   security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({ provider: z.string() }),
@@ -955,11 +746,10 @@ registry.registerPath({
   },
 });
 
+// Decrypt — auto-resolves key source via org_provider_key_sources preference
 export const DecryptKeyQuerySchema = z
   .object({
-    keySource: KeySourceSchema,
-    orgId: z.string().min(1).optional(),
-    appId: z.string().min(1).optional(),
+    orgId: z.string().min(1),
   })
   .openapi("DecryptKeyQuery");
 
@@ -967,15 +757,16 @@ const DecryptKeyResponseSchema = z
   .object({
     provider: z.string(),
     key: z.string(),
+    keySource: z.enum(["org", "platform"]),
   })
   .openapi("DecryptKeyResponse");
 
 registry.registerPath({
   method: "get",
   path: "/keys/{provider}/decrypt",
-  summary: "Get decrypted key",
+  summary: "Get decrypted key (auto-resolves source)",
   description:
-    "Returns the decrypted key for a provider. keySource determines which store to query: org (requires orgId), app (requires appId), platform (no scope). 'byok' is accepted as alias for 'org'. Requires X-Caller-* headers for provider requirements tracking.",
+    "Returns the decrypted key for a provider. Automatically resolves whether to use org or platform key based on the org's preference (default: platform). Response includes keySource indicating which was used. Requires X-Caller-* headers for provider requirements tracking.",
   security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({ provider: z.string() }),
@@ -993,5 +784,119 @@ registry.registerPath({
     },
     400: { description: "Missing required parameters or caller headers" },
     404: { description: "Key not configured" },
+  },
+});
+
+// ==================== Key Source Preferences ====================
+
+export const SetKeySourceRequestSchema = z
+  .object({
+    orgId: z.string().min(1),
+    keySource: z.enum(["org", "platform"]),
+  })
+  .openapi("SetKeySourceRequest");
+
+const SetKeySourceResponseSchema = z
+  .object({
+    provider: z.string(),
+    orgId: z.string(),
+    keySource: z.enum(["org", "platform"]),
+    message: z.string(),
+  })
+  .openapi("SetKeySourceResponse");
+
+registry.registerPath({
+  method: "put",
+  path: "/keys/{provider}/source",
+  summary: "Set key source preference for an org+provider",
+  description:
+    "Set whether an org uses its own key ('org') or the platform key ('platform') for a given provider. If switching to 'org', an org key must already be stored — otherwise returns 400.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    params: z.object({ provider: z.string() }),
+    body: {
+      content: { "application/json": { schema: SetKeySourceRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Key source preference saved",
+      content: { "application/json": { schema: SetKeySourceResponseSchema } },
+    },
+    400: { description: "Invalid request or no org key stored" },
+  },
+});
+
+const GetKeySourceQuerySchema = z
+  .object({
+    orgId: z.string().min(1),
+  })
+  .openapi("GetKeySourceQuery");
+
+const GetKeySourceResponseSchema = z
+  .object({
+    provider: z.string(),
+    orgId: z.string(),
+    keySource: z.enum(["org", "platform"]),
+    isDefault: z.boolean(),
+  })
+  .openapi("GetKeySourceResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/keys/{provider}/source",
+  summary: "Get key source preference for an org+provider",
+  description:
+    "Returns the current key source preference for an org+provider. If no explicit preference is set, returns 'platform' with isDefault=true.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    params: z.object({ provider: z.string() }),
+    query: GetKeySourceQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "Key source preference",
+      content: { "application/json": { schema: GetKeySourceResponseSchema } },
+    },
+    400: { description: "Missing orgId" },
+  },
+});
+
+// List all key source preferences for an org
+const ListKeySourcesQuerySchema = z
+  .object({
+    orgId: z.string().min(1),
+  })
+  .openapi("ListKeySourcesQuery");
+
+const KeySourceItemSchema = z
+  .object({
+    provider: z.string(),
+    keySource: z.enum(["org", "platform"]),
+  })
+  .openapi("KeySourceItem");
+
+const ListKeySourcesResponseSchema = z
+  .object({
+    sources: z.array(KeySourceItemSchema),
+  })
+  .openapi("ListKeySourcesResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/keys/sources",
+  summary: "List all key source preferences for an org",
+  description:
+    "Returns all explicit key source preferences for an org. Providers not listed default to 'platform'.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    query: ListKeySourcesQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "Key source preferences",
+      content: { "application/json": { schema: ListKeySourcesResponseSchema } },
+    },
+    400: { description: "Missing orgId" },
   },
 });

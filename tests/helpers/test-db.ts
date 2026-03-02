@@ -1,53 +1,37 @@
 import { db, sql } from "../../src/db/index.js";
-import { orgs, users, apiKeys, appKeys, apps, orgKeys, platformKeys, providerRequirements } from "../../src/db/schema.js";
+import { userAuthKeys, orgKeys, platformKeys, providers, orgProviderKeySources, providerRequirements } from "../../src/db/schema.js";
 
 /**
  * Clean all test data from the database
  */
 export async function cleanTestData() {
-  await db.delete(apiKeys);
-  await db.delete(appKeys);
-  await db.delete(platformKeys);
+  await db.delete(userAuthKeys);
+  await db.delete(orgProviderKeySources);
   await db.delete(orgKeys);
+  await db.delete(platformKeys);
   await db.delete(providerRequirements);
-  await db.delete(apps);
-  await db.delete(users);
-  await db.delete(orgs);
+  await db.delete(providers);
 }
 
 /**
- * Insert a test org
+ * Insert a test provider
  */
-export async function insertTestOrg(data: { orgId?: string } = {}) {
-  const [org] = await db
-    .insert(orgs)
+export async function insertTestProvider(data: { name?: string } = {}) {
+  const [provider] = await db
+    .insert(providers)
     .values({
-      orgId: data.orgId || `test-org-${Date.now()}`,
+      name: data.name || `provider-${Date.now()}`,
     })
     .returning();
-  return org;
+  return provider;
 }
 
 /**
- * Insert a test user
+ * Insert a test user auth key
  */
-export async function insertTestUser(data: { userId?: string } = {}) {
-  const [user] = await db
-    .insert(users)
-    .values({
-      userId: data.userId || `test-user-${Date.now()}`,
-    })
-    .returning();
-  return user;
-}
-
-/**
- * Insert a test API key
- */
-export async function insertTestApiKey(
-  orgId: string,
+export async function insertTestUserAuthKey(
   data: {
-    appId?: string;
+    orgId?: string;
     userId?: string;
     createdBy?: string;
     keyHash?: string;
@@ -57,13 +41,12 @@ export async function insertTestApiKey(
   } = {}
 ) {
   const [key] = await db
-    .insert(apiKeys)
+    .insert(userAuthKeys)
     .values({
-      appId: data.appId || "test-app",
-      orgId,
+      orgId: data.orgId || `test-org-${Date.now()}`,
       userId: data.userId || crypto.randomUUID(),
       createdBy: data.createdBy || crypto.randomUUID(),
-      keyHash: data.keyHash || `hash-${Date.now()}`,
+      keyHash: data.keyHash || `hash-${Date.now()}-${Math.random()}`,
       keyPrefix: data.keyPrefix || "distrib.usr_",
       encryptedKey: data.encryptedKey,
       name: data.name || "Test Key",
@@ -73,34 +56,17 @@ export async function insertTestApiKey(
 }
 
 /**
- * Insert a test BYOK key
+ * Insert a test org key
  */
 export async function insertTestOrgKey(
-  orgId: string,
-  data: { provider?: string; encryptedKey?: string } = {}
+  providerId: string,
+  data: { orgId?: string; encryptedKey?: string } = {}
 ) {
   const [key] = await db
     .insert(orgKeys)
     .values({
-      orgId,
-      provider: data.provider || "apollo",
-      encryptedKey: data.encryptedKey || `encrypted-${Date.now()}`,
-    })
-    .returning();
-  return key;
-}
-
-/**
- * Insert a test app key
- */
-export async function insertTestAppKey(
-  data: { appId?: string; provider?: string; encryptedKey?: string } = {}
-) {
-  const [key] = await db
-    .insert(appKeys)
-    .values({
-      appId: data.appId || `test-app-${Date.now()}`,
-      provider: data.provider || "stripe",
+      orgId: data.orgId || `test-org-${Date.now()}`,
+      providerId,
       encryptedKey: data.encryptedKey || `encrypted-${Date.now()}`,
     })
     .returning();
@@ -111,16 +77,34 @@ export async function insertTestAppKey(
  * Insert a test platform key
  */
 export async function insertTestPlatformKey(
-  data: { provider?: string; encryptedKey?: string } = {}
+  providerId: string,
+  data: { encryptedKey?: string } = {}
 ) {
   const [key] = await db
     .insert(platformKeys)
     .values({
-      provider: data.provider || "anthropic",
+      providerId,
       encryptedKey: data.encryptedKey || `encrypted-${Date.now()}`,
     })
     .returning();
   return key;
+}
+
+/**
+ * Insert a test org provider key source preference
+ */
+export async function insertTestOrgProviderKeySource(
+  data: { orgId?: string; providerId: string; keySource?: string }
+) {
+  const [pref] = await db
+    .insert(orgProviderKeySources)
+    .values({
+      orgId: data.orgId || `test-org-${Date.now()}`,
+      providerId: data.providerId,
+      keySource: data.keySource || "platform",
+    })
+    .returning();
+  return pref;
 }
 
 /**

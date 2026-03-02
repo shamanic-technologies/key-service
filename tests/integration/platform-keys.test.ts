@@ -127,12 +127,12 @@ describe("Platform Keys endpoints", () => {
       expect(res.body.error).toContain("X-Caller-Service");
     });
 
-    it("should not require appId or orgId", async () => {
+    it("should not require orgId", async () => {
       await request(app)
         .post("/internal/platform-keys")
         .send({ provider: "anthropic", apiKey: "sk-ant-secret123" });
 
-      // No appId, no orgId — just provider and caller headers
+      // No orgId — just provider and caller headers
       const res = await request(app)
         .get("/internal/platform-keys/anthropic/decrypt")
         .set(callerHeaders);

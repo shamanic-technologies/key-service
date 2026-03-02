@@ -1,9 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   generateApiKey,
-  generateAppApiKey,
   isValidApiKeyFormat,
-  isAppApiKey,
   isUserApiKey,
   hasValidPrefix,
   hashApiKey,
@@ -15,13 +13,6 @@ describe("api-key module", () => {
     it("should generate keys with distrib.usr_ prefix", () => {
       const key = generateApiKey();
       expect(key).toMatch(/^distrib\.usr_[a-f0-9]{40}$/);
-    });
-  });
-
-  describe("generateAppApiKey", () => {
-    it("should generate keys with distrib.app_ prefix", () => {
-      const key = generateAppApiKey();
-      expect(key).toMatch(/^distrib\.app_[a-f0-9]{40}$/);
     });
   });
 
@@ -39,20 +30,6 @@ describe("api-key module", () => {
     });
   });
 
-  describe("isAppApiKey", () => {
-    it("should recognize new distrib.app_ keys", () => {
-      expect(isAppApiKey("distrib.app_" + "a".repeat(40))).toBe(true);
-    });
-
-    it("should recognize legacy mcpf_app_ keys", () => {
-      expect(isAppApiKey("mcpf_app_" + "a".repeat(40))).toBe(true);
-    });
-
-    it("should reject user keys", () => {
-      expect(isAppApiKey("distrib.usr_" + "a".repeat(40))).toBe(false);
-    });
-  });
-
   describe("isUserApiKey", () => {
     it("should recognize new distrib.usr_ keys", () => {
       expect(isUserApiKey("distrib.usr_" + "a".repeat(40))).toBe(true);
@@ -62,24 +39,26 @@ describe("api-key module", () => {
       expect(isUserApiKey("mcpf_usr_" + "a".repeat(40))).toBe(true);
     });
 
-    it("should reject app keys", () => {
-      expect(isUserApiKey("distrib.app_" + "a".repeat(40))).toBe(false);
+    it("should reject unknown prefix", () => {
+      expect(isUserApiKey("unknown_" + "a".repeat(40))).toBe(false);
     });
   });
 
   describe("hasValidPrefix", () => {
-    it("should accept distrib. prefix", () => {
+    it("should accept distrib.usr_ prefix", () => {
       expect(hasValidPrefix("distrib.usr_abc")).toBe(true);
-      expect(hasValidPrefix("distrib.app_abc")).toBe(true);
     });
 
-    it("should accept legacy mcpf_ prefix", () => {
+    it("should accept legacy mcpf_usr_ prefix", () => {
       expect(hasValidPrefix("mcpf_usr_abc")).toBe(true);
-      expect(hasValidPrefix("mcpf_app_abc")).toBe(true);
     });
 
     it("should reject unknown prefix", () => {
       expect(hasValidPrefix("unknown_abc")).toBe(false);
+    });
+
+    it("should reject app key prefix", () => {
+      expect(hasValidPrefix("distrib.app_abc")).toBe(false);
     });
   });
 
