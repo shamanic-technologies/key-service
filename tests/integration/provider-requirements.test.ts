@@ -3,6 +3,7 @@ import request from "supertest";
 import express from "express";
 import { eq, and } from "drizzle-orm";
 import internalRoutes from "../../src/routes/internal.js";
+import { requireIdentityHeaders } from "../../src/middleware/auth.js";
 import { db } from "../../src/db/index.js";
 import { providerRequirements } from "../../src/db/schema.js";
 import {
@@ -13,7 +14,12 @@ import {
 
 const app = express();
 app.use(express.json());
-app.use("/internal", internalRoutes);
+app.use("/internal", requireIdentityHeaders, internalRoutes);
+
+const identityHeaders = {
+  "x-org-id": "test-org-id",
+  "x-user-id": "test-user-id",
+};
 
 const callerHeaders = {
   "x-caller-service": "apollo",
@@ -37,6 +43,7 @@ describe("Provider Requirements", () => {
     it("should return 400 without caller headers on org key decrypt", async () => {
       const res = await request(app)
         .get("/internal/keys/apollo/decrypt")
+        .set(identityHeaders)
         .query({ orgId: "org_test" });
 
       expect(res.status).toBe(400);
@@ -46,7 +53,7 @@ describe("Provider Requirements", () => {
     it("should return 400 with partial caller headers", async () => {
       const res = await request(app)
         .get("/internal/keys/apollo/decrypt")
-        .set({ "x-caller-service": "apollo" })
+        .set({ ...identityHeaders, "x-caller-service": "apollo" })
         .query({ orgId: "org_test" });
 
       expect(res.status).toBe(400);
@@ -57,7 +64,8 @@ describe("Provider Requirements", () => {
   describe("Caller header validation on platform key decrypt", () => {
     it("should return 400 without caller headers on platform key decrypt", async () => {
       const res = await request(app)
-        .get("/internal/platform-keys/stripe/decrypt");
+        .get("/internal/platform-keys/stripe/decrypt")
+        .set(identityHeaders);
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain("X-Caller-Service");
@@ -68,15 +76,15 @@ describe("Provider Requirements", () => {
 
   describe("Provider requirement recording", () => {
     it("should record a provider requirement on org key decrypt", async () => {
-      // Create an org key first
       await request(app)
         .post("/internal/keys")
+        .set(identityHeaders)
         .send({ orgId: "org-1", provider: "stripe", apiKey: "sk_live_test" });
 
-      // Decrypt with caller headers
       const res = await request(app)
         .get("/internal/keys/stripe/decrypt")
         .set({
+          ...identityHeaders,
           "x-caller-service": "payment-service",
           "x-caller-method": "POST",
           "x-caller-path": "/payments/charge",
@@ -85,7 +93,6 @@ describe("Provider Requirements", () => {
 
       expect(res.status).toBe(200);
 
-      // Verify the requirement was recorded
       const reqs = await db.query.providerRequirements.findMany({
         where: and(
           eq(providerRequirements.service, "payment-service"),
@@ -99,15 +106,15 @@ describe("Provider Requirements", () => {
     });
 
     it("should record a provider requirement on platform key decrypt", async () => {
-      // Create a platform key first
       await request(app)
         .post("/internal/platform-keys")
+        .set(identityHeaders)
         .send({ provider: "anthropic", apiKey: "sk-ant-test" });
 
-      // Decrypt with caller headers
       const res = await request(app)
         .get("/internal/platform-keys/anthropic/decrypt")
         .set({
+          ...identityHeaders,
           "x-caller-service": "ai-service",
           "x-caller-method": "POST",
           "x-caller-path": "/generate",
@@ -130,49 +137,48 @@ describe("Provider Requirements", () => {
     it("should update lastSeenAt on repeat calls (upsert)", async () => {
       await request(app)
         .post("/internal/keys")
+        .set(identityHeaders)
         .send({ orgId: "org-1", provider: "stripe", apiKey: "sk_live_test" });
 
-      // First call
       await request(app)
         .get("/internal/keys/stripe/decrypt")
-        .set(callerHeaders)
+        .set({ ...identityHeaders, ...callerHeaders })
         .query({ orgId: "org-1" });
 
       const firstReqs = await db.query.providerRequirements.findMany();
       expect(firstReqs).toHaveLength(1);
       const firstSeenAt = firstReqs[0].lastSeenAt;
 
-      // Wait a moment to ensure timestamp changes
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      // Second call
       await request(app)
         .get("/internal/keys/stripe/decrypt")
-        .set(callerHeaders)
+        .set({ ...identityHeaders, ...callerHeaders })
         .query({ orgId: "org-1" });
 
       const secondReqs = await db.query.providerRequirements.findMany();
-      expect(secondReqs).toHaveLength(1); // Still 1 row, not 2
+      expect(secondReqs).toHaveLength(1);
       expect(secondReqs[0].lastSeenAt.getTime()).toBeGreaterThanOrEqual(firstSeenAt.getTime());
     });
 
     it("should record multiple providers for the same endpoint", async () => {
       await request(app)
         .post("/internal/keys")
+        .set(identityHeaders)
         .send({ orgId: "org-1", provider: "openai", apiKey: "sk-test1" });
       await request(app)
         .post("/internal/keys")
+        .set(identityHeaders)
         .send({ orgId: "org-1", provider: "anthropic", apiKey: "sk-ant-test1" });
 
-      // Same caller, different providers
       await request(app)
         .get("/internal/keys/openai/decrypt")
-        .set(callerHeaders)
+        .set({ ...identityHeaders, ...callerHeaders })
         .query({ orgId: "org-1" });
 
       await request(app)
         .get("/internal/keys/anthropic/decrypt")
-        .set(callerHeaders)
+        .set({ ...identityHeaders, ...callerHeaders })
         .query({ orgId: "org-1" });
 
       const reqs = await db.query.providerRequirements.findMany({
@@ -187,7 +193,7 @@ describe("Provider Requirements", () => {
     it("should not record when key is not found (404)", async () => {
       const res = await request(app)
         .get("/internal/keys/stripe/decrypt")
-        .set(callerHeaders)
+        .set({ ...identityHeaders, ...callerHeaders })
         .query({ orgId: "nonexistent" });
 
       expect(res.status).toBe(404);
@@ -216,6 +222,7 @@ describe("Provider Requirements", () => {
 
       const res = await request(app)
         .post("/internal/provider-requirements")
+        .set(identityHeaders)
         .send({
           endpoints: [
             { service: "apollo", method: "POST", path: "/leads/search" },
@@ -231,6 +238,7 @@ describe("Provider Requirements", () => {
     it("should return empty for unknown endpoints", async () => {
       const res = await request(app)
         .post("/internal/provider-requirements")
+        .set(identityHeaders)
         .send({
           endpoints: [
             { service: "unknown", method: "GET", path: "/nothing" },
@@ -258,6 +266,7 @@ describe("Provider Requirements", () => {
 
       const res = await request(app)
         .post("/internal/provider-requirements")
+        .set(identityHeaders)
         .send({
           endpoints: [
             { service: "apollo", method: "POST", path: "/leads/search" },
@@ -267,7 +276,7 @@ describe("Provider Requirements", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.requirements).toHaveLength(2);
-      expect(res.body.providers).toEqual(["apollo"]); // Deduplicated
+      expect(res.body.providers).toEqual(["apollo"]);
     });
 
     it("should normalize service to lowercase and method to uppercase", async () => {
@@ -280,6 +289,7 @@ describe("Provider Requirements", () => {
 
       const res = await request(app)
         .post("/internal/provider-requirements")
+        .set(identityHeaders)
         .send({
           endpoints: [
             { service: "Apollo", method: "post", path: "/leads/search" },
@@ -294,6 +304,7 @@ describe("Provider Requirements", () => {
     it("should return 400 for invalid request body", async () => {
       const res = await request(app)
         .post("/internal/provider-requirements")
+        .set(identityHeaders)
         .send({});
 
       expect(res.status).toBe(400);
@@ -302,6 +313,7 @@ describe("Provider Requirements", () => {
     it("should return 400 for empty endpoints array", async () => {
       const res = await request(app)
         .post("/internal/provider-requirements")
+        .set(identityHeaders)
         .send({ endpoints: [] });
 
       expect(res.status).toBe(400);
@@ -321,9 +333,9 @@ describe("Provider Requirements", () => {
         provider: "firecrawl",
       });
 
-      // Only query for apollo endpoint
       const res = await request(app)
         .post("/internal/provider-requirements")
+        .set(identityHeaders)
         .send({
           endpoints: [
             { service: "apollo", method: "POST", path: "/leads/search" },

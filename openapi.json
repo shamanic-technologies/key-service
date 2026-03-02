@@ -1,0 +1,2060 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Key Service",
+    "description": "Manages API keys and BYOK (Bring Your Own Key) credentials for organizations. Handles key generation, validation, encryption, and secure storage.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "serviceKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "Service-to-service key (KEY_SERVICE_API_KEY)"
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "service"
+        ]
+      },
+      "ValidateResponse": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "user"
+            ]
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "configuredProviders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "valid",
+          "type",
+          "orgId",
+          "userId",
+          "configuredProviders"
+        ]
+      },
+      "ValidateKeyResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "key"
+        ]
+      },
+      "ListUserAuthKeysResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserAuthKeyItem"
+            }
+          }
+        },
+        "required": [
+          "keys"
+        ]
+      },
+      "UserAuthKeyItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "keyPrefix": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "keyPrefix",
+          "name",
+          "orgId",
+          "userId",
+          "createdBy",
+          "createdAt",
+          "lastUsedAt"
+        ]
+      },
+      "CreateUserAuthKeyResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "orgId",
+          "userId",
+          "createdBy",
+          "createdAt"
+        ]
+      },
+      "CreateUserAuthKeyRequest": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "userId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "createdBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "orgId",
+          "userId",
+          "createdBy",
+          "name"
+        ]
+      },
+      "MessageResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "DeleteUserAuthKeyRequest": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "orgId"
+        ]
+      },
+      "SessionKeyResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string"
+          },
+          "keyPrefix": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "keyPrefix",
+          "name"
+        ]
+      },
+      "SessionKeyRequest": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "userId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "orgId",
+          "userId"
+        ]
+      },
+      "ListOrgKeysResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgKeyItem"
+            }
+          }
+        },
+        "required": [
+          "keys"
+        ]
+      },
+      "OrgKeyItem": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "maskedKey": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "provider",
+          "maskedKey",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateOrgKeyResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "maskedKey": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "maskedKey",
+          "message"
+        ]
+      },
+      "CreateOrgKeyRequest": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "apiKey": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "orgId",
+          "provider",
+          "apiKey"
+        ]
+      },
+      "DeleteOrgKeyResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "message"
+        ]
+      },
+      "DecryptOrgKeyResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "key"
+        ]
+      },
+      "CreatePlatformKeyResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "maskedKey": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "maskedKey",
+          "message"
+        ]
+      },
+      "CreatePlatformKeyRequest": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "apiKey": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "provider",
+          "apiKey"
+        ]
+      },
+      "ListPlatformKeysResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformKeyItem"
+            }
+          }
+        },
+        "required": [
+          "keys"
+        ]
+      },
+      "PlatformKeyItem": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "maskedKey": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "provider",
+          "maskedKey",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "DecryptPlatformKeyResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "key"
+        ]
+      },
+      "DeletePlatformKeyResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "message"
+        ]
+      },
+      "ProviderRequirementsResponse": {
+        "type": "object",
+        "properties": {
+          "requirements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderRequirementItem"
+            }
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "requirements",
+          "providers"
+        ]
+      },
+      "ProviderRequirementItem": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "method",
+          "path",
+          "provider"
+        ]
+      },
+      "ProviderRequirementsRequest": {
+        "type": "object",
+        "properties": {
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Endpoint"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "endpoints"
+        ]
+      },
+      "Endpoint": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "minLength": 1
+          },
+          "method": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "service",
+          "method",
+          "path"
+        ]
+      },
+      "DecryptKeyResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "keySource": {
+            "type": "string",
+            "enum": [
+              "org",
+              "platform"
+            ]
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "key",
+          "keySource",
+          "userId"
+        ]
+      },
+      "SetKeySourceResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "keySource": {
+            "type": "string",
+            "enum": [
+              "org",
+              "platform"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "orgId",
+          "keySource",
+          "message"
+        ]
+      },
+      "SetKeySourceRequest": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "keySource": {
+            "type": "string",
+            "enum": [
+              "org",
+              "platform"
+            ]
+          }
+        },
+        "required": [
+          "orgId",
+          "keySource"
+        ]
+      },
+      "GetKeySourceResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "keySource": {
+            "type": "string",
+            "enum": [
+              "org",
+              "platform"
+            ]
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "provider",
+          "orgId",
+          "keySource",
+          "isDefault"
+        ]
+      },
+      "ListKeySourcesResponse": {
+        "type": "object",
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeySourceItem"
+            }
+          }
+        },
+        "required": [
+          "sources"
+        ]
+      },
+      "KeySourceItem": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "keySource": {
+            "type": "string",
+            "enum": [
+              "org",
+              "platform"
+            ]
+          }
+        },
+        "required": [
+          "provider",
+          "keySource"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/validate": {
+      "get": {
+        "summary": "Validate API key — returns user identity",
+        "description": "Pass the API key to validate as ?key= query parameter. Authenticated via X-API-Key (service key).",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The API key to validate (distrib.usr_*)",
+              "example": "distrib.usr_abc123"
+            },
+            "required": true,
+            "description": "The API key to validate (distrib.usr_*)",
+            "name": "key",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API key is valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing key parameter"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/validate/keys/{provider}": {
+      "get": {
+        "summary": "Get decrypted org key for a provider",
+        "description": "Pass the user's API key as ?key= query parameter. Requires X-Caller-Service, X-Caller-Method, and X-Caller-Path headers to identify the calling endpoint. These are used to build the provider requirements registry.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The API key to validate (distrib.usr_*)",
+              "example": "distrib.usr_abc123"
+            },
+            "required": true,
+            "description": "The API key to validate (distrib.usr_*)",
+            "name": "key",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the calling service",
+              "example": "apollo"
+            },
+            "required": true,
+            "description": "Name of the calling service",
+            "name": "x-caller-service",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "HTTP method of the caller's endpoint",
+              "example": "POST"
+            },
+            "required": true,
+            "description": "HTTP method of the caller's endpoint",
+            "name": "x-caller-method",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path of the caller's endpoint",
+              "example": "/leads/search"
+            },
+            "required": true,
+            "description": "Path of the caller's endpoint",
+            "name": "x-caller-path",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decrypted key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing key parameter or required caller headers"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Key not configured"
+          }
+        }
+      }
+    },
+    "/internal/api-keys": {
+      "get": {
+        "summary": "List user auth keys for an org",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "userId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user auth keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListUserAuthKeysResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing orgId"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new user auth key",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserAuthKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User auth key created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateUserAuthKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/internal/api-keys/{id}": {
+      "delete": {
+        "summary": "Delete a user auth key",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteUserAuthKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User auth key deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing orgId"
+          },
+          "404": {
+            "description": "Key not found"
+          }
+        }
+      }
+    },
+    "/internal/api-keys/session": {
+      "post": {
+        "summary": "Get or create a default user auth key for the org+user",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing orgId or userId"
+          }
+        }
+      }
+    },
+    "/internal/keys": {
+      "get": {
+        "summary": "List org keys for an org",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of org keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListOrgKeysResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing orgId"
+          }
+        }
+      },
+      "post": {
+        "summary": "Add or update an org key",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrgKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Org key saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateOrgKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/internal/keys/{provider}": {
+      "delete": {
+        "summary": "Delete an org key",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Org key deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteOrgKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/internal/keys/{provider}/decrypt": {
+      "get": {
+        "summary": "Get decrypted org key (internal service use)",
+        "description": "Requires X-Caller-Service, X-Caller-Method, and X-Caller-Path headers to identify the calling endpoint. These are used to build the provider requirements registry.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the calling service",
+              "example": "apollo"
+            },
+            "required": true,
+            "description": "Name of the calling service",
+            "name": "x-caller-service",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "HTTP method of the caller's endpoint",
+              "example": "POST"
+            },
+            "required": true,
+            "description": "HTTP method of the caller's endpoint",
+            "name": "x-caller-method",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path of the caller's endpoint",
+              "example": "/leads/search"
+            },
+            "required": true,
+            "description": "Path of the caller's endpoint",
+            "name": "x-caller-path",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decrypted key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecryptOrgKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing orgId or required caller headers"
+          },
+          "404": {
+            "description": "Key not configured"
+          }
+        }
+      }
+    },
+    "/internal/platform-keys": {
+      "post": {
+        "summary": "Add or update a platform key",
+        "description": "Upsert a platform-level API key. Platform keys are global — not tied to any org. Typically registered once at deployment.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlatformKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Platform key saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePlatformKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      },
+      "get": {
+        "summary": "List all platform keys",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of platform keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListPlatformKeysResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/platform-keys/{provider}/decrypt": {
+      "get": {
+        "summary": "Get decrypted platform key (internal service use)",
+        "description": "Returns the decrypted platform-level key for the given provider. No orgId needed — platform keys are global. Requires X-Caller-* headers for provider requirements tracking.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the calling service",
+              "example": "apollo"
+            },
+            "required": true,
+            "description": "Name of the calling service",
+            "name": "x-caller-service",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "HTTP method of the caller's endpoint",
+              "example": "POST"
+            },
+            "required": true,
+            "description": "HTTP method of the caller's endpoint",
+            "name": "x-caller-method",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path of the caller's endpoint",
+              "example": "/leads/search"
+            },
+            "required": true,
+            "description": "Path of the caller's endpoint",
+            "name": "x-caller-path",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decrypted key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecryptPlatformKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required caller headers"
+          },
+          "404": {
+            "description": "Key not configured"
+          }
+        }
+      }
+    },
+    "/internal/platform-keys/{provider}": {
+      "delete": {
+        "summary": "Delete a platform key",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Platform key deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletePlatformKeyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/provider-requirements": {
+      "post": {
+        "summary": "Query which providers are needed for a set of endpoints",
+        "description": "Given a list of service endpoints (service + method + path), returns which third-party providers each endpoint has been observed requesting. Used by workflow-service to determine which keys are needed before execution.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderRequirementsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Provider requirements for the given endpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderRequirementsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/keys/{provider}/decrypt": {
+      "get": {
+        "summary": "Get decrypted key (auto-resolves source)",
+        "description": "Returns the decrypted key for a provider. Automatically resolves whether to use org or platform key based on the org's preference (default: platform). Response includes keySource indicating which was used. Requires X-Caller-* headers for provider requirements tracking. Always pass both orgId and userId — userId is required for logging.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "userId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the calling service",
+              "example": "apollo"
+            },
+            "required": true,
+            "description": "Name of the calling service",
+            "name": "x-caller-service",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "HTTP method of the caller's endpoint",
+              "example": "POST"
+            },
+            "required": true,
+            "description": "HTTP method of the caller's endpoint",
+            "name": "x-caller-method",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path of the caller's endpoint",
+              "example": "/leads/search"
+            },
+            "required": true,
+            "description": "Path of the caller's endpoint",
+            "name": "x-caller-path",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decrypted key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecryptKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required parameters or caller headers"
+          },
+          "404": {
+            "description": "Key not configured"
+          }
+        }
+      }
+    },
+    "/keys/{provider}/source": {
+      "put": {
+        "summary": "Set key source preference for an org+provider",
+        "description": "Set whether an org uses its own key ('org') or the platform key ('platform') for a given provider. If switching to 'org', an org key must already be stored — otherwise returns 400.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetKeySourceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Key source preference saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetKeySourceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or no org key stored"
+          }
+        }
+      },
+      "get": {
+        "summary": "Get key source preference for an org+provider",
+        "description": "Returns the current key source preference for an org+provider. If no explicit preference is set, returns 'platform' with isDefault=true.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key source preference",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetKeySourceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing orgId"
+          }
+        }
+      }
+    },
+    "/keys/sources": {
+      "get": {
+        "summary": "List all key source preferences for an org",
+        "description": "Returns all explicit key source preferences for an org. Providers not listed default to 'platform'.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key source preferences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListKeySourcesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing orgId"
+          }
+        }
+      }
+    }
+  }
+}

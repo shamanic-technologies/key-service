@@ -11,7 +11,7 @@ import healthRoutes from "./routes/health.js";
 import internalRoutes from "./routes/internal.js";
 import keysRoutes from "./routes/keys.js";
 import validateRoutes from "./routes/validate.js";
-import { serviceKeyAuth } from "./middleware/auth.js";
+import { serviceKeyAuth, requireIdentityHeaders } from "./middleware/auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -38,11 +38,11 @@ app.use(healthRoutes);
 // API key validation (service-to-service, authenticated via X-API-Key)
 app.use(serviceKeyAuth, validateRoutes);
 
-// Unified key management (new canonical endpoints)
-app.use("/keys", serviceKeyAuth, keysRoutes);
+// Key management endpoints (resolve, preferences)
+app.use("/keys", serviceKeyAuth, requireIdentityHeaders, keysRoutes);
 
-// Legacy internal routes (kept for backwards compatibility)
-app.use("/internal", serviceKeyAuth, internalRoutes);
+// Internal routes (CRUD for keys, user auth keys, provider requirements)
+app.use("/internal", serviceKeyAuth, requireIdentityHeaders, internalRoutes);
 
 // 404
 app.use((req, res) => {

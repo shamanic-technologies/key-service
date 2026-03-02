@@ -1,18 +1,24 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import request from "supertest";
 import express from "express";
-import { serviceKeyAuth } from "../../src/middleware/auth.js";
+import { serviceKeyAuth, requireIdentityHeaders } from "../../src/middleware/auth.js";
 import internalRoutes from "../../src/routes/internal.js";
 import validateRoutes from "../../src/routes/validate.js";
 import { cleanTestData, closeDb, randomId } from "../helpers/test-db.js";
 
 const SERVICE_KEY = "test-service-key-123";
 
+const identityHeaders = {
+  "x-org-id": "test-org-id",
+  "x-user-id": "test-user-id",
+};
+
 function createApp() {
   const app = express();
   app.use(express.json());
+  // /validate is exempt from identity headers (discovers identity from key)
   app.use(serviceKeyAuth, validateRoutes);
-  app.use("/internal", serviceKeyAuth, internalRoutes);
+  app.use("/internal", serviceKeyAuth, requireIdentityHeaders, internalRoutes);
   return app;
 }
 
@@ -41,6 +47,7 @@ describe("User API Keys", () => {
       const res = await request(app)
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send({
           orgId: "org-uuid-123",
           userId,
@@ -62,6 +69,7 @@ describe("User API Keys", () => {
       const res = await request(app)
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send({ orgId: "org-uuid-123" });
 
       expect(res.status).toBe(400);
@@ -74,6 +82,7 @@ describe("User API Keys", () => {
       const res = await request(app)
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send({
           orgId: "org-uuid-admin",
           userId,
@@ -85,6 +94,21 @@ describe("User API Keys", () => {
       expect(res.body.userId).toBe(userId);
       expect(res.body.createdBy).toBe(adminId);
     });
+
+    it("should reject request without identity headers", async () => {
+      const res = await request(app)
+        .post("/internal/api-keys")
+        .set("x-api-key", SERVICE_KEY)
+        .send({
+          orgId: "org-uuid-123",
+          userId: randomId(),
+          createdBy: randomId(),
+          name: "Test",
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("x-org-id");
+    });
   });
 
   describe("GET /internal/api-keys", () => {
@@ -94,6 +118,7 @@ describe("User API Keys", () => {
       await request(app)
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send({
           orgId: "org-list-test",
           userId,
@@ -104,6 +129,7 @@ describe("User API Keys", () => {
       const res = await request(app)
         .get("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .query({ orgId: "org-list-test" });
 
       expect(res.status).toBe(200);
@@ -121,6 +147,7 @@ describe("User API Keys", () => {
       await request(app)
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send({
           orgId: "org-filter-test",
           userId: user1,
@@ -131,6 +158,7 @@ describe("User API Keys", () => {
       await request(app)
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send({
           orgId: "org-filter-test",
           userId: user2,
@@ -141,6 +169,7 @@ describe("User API Keys", () => {
       const allRes = await request(app)
         .get("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .query({ orgId: "org-filter-test" });
 
       expect(allRes.body.keys).toHaveLength(2);
@@ -148,6 +177,7 @@ describe("User API Keys", () => {
       const filteredRes = await request(app)
         .get("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .query({ orgId: "org-filter-test", userId: user1 });
 
       expect(filteredRes.body.keys).toHaveLength(1);
@@ -162,6 +192,7 @@ describe("User API Keys", () => {
       const create = await request(app)
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send({
           orgId: "org-delete-test",
           userId,
@@ -172,6 +203,7 @@ describe("User API Keys", () => {
       const res = await request(app)
         .delete(`/internal/api-keys/${create.body.id}`)
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send({ orgId: "org-delete-test" });
 
       expect(res.status).toBe(200);
@@ -179,6 +211,7 @@ describe("User API Keys", () => {
       const list = await request(app)
         .get("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .query({ orgId: "org-delete-test" });
 
       expect(list.body.keys).toHaveLength(0);
@@ -192,6 +225,7 @@ describe("User API Keys", () => {
       const create = await request(app)
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send({
           orgId: "org-validate-test",
           userId,
@@ -249,6 +283,30 @@ describe("User API Keys", () => {
       expect(res.status).toBe(401);
       expect(res.body.error).toBe("Invalid service key");
     });
+
+    it("should work without identity headers (validate is exempt)", async () => {
+      const userId = randomId();
+
+      const create = await request(app)
+        .post("/internal/api-keys")
+        .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
+        .send({
+          orgId: "org-validate-no-headers",
+          userId,
+          createdBy: userId,
+          name: "No Headers Test",
+        });
+
+      // /validate should work without x-org-id / x-user-id
+      const res = await request(app)
+        .get("/validate")
+        .set("x-api-key", SERVICE_KEY)
+        .query({ key: create.body.key });
+
+      expect(res.status).toBe(200);
+      expect(res.body.valid).toBe(true);
+    });
   });
 
   describe("POST /internal/api-keys/session", () => {
@@ -258,6 +316,7 @@ describe("User API Keys", () => {
       const res = await request(app)
         .post("/internal/api-keys/session")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send({
           orgId: "org-session-test",
           userId,
@@ -278,11 +337,13 @@ describe("User API Keys", () => {
       const first = await request(app)
         .post("/internal/api-keys/session")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send(body);
 
       const second = await request(app)
         .post("/internal/api-keys/session")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send(body);
 
       expect(first.body.key).toBe(second.body.key);
@@ -296,11 +357,13 @@ describe("User API Keys", () => {
       const res1 = await request(app)
         .post("/internal/api-keys/session")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send({ orgId: "org-multi-user", userId: user1 });
 
       const res2 = await request(app)
         .post("/internal/api-keys/session")
         .set("x-api-key", SERVICE_KEY)
+        .set(identityHeaders)
         .send({ orgId: "org-multi-user", userId: user2 });
 
       expect(res1.body.key).not.toBe(res2.body.key);
