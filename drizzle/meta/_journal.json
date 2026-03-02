@@ -57,6 +57,13 @@
       "when": 1772592000000,
       "tag": "0007_user_key_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1772611200000,
+      "tag": "0008_rename_byok_to_org",
+      "breakpoints": true
     }
   ]
 }

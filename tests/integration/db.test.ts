@@ -3,8 +3,8 @@ import { eq } from "drizzle-orm";
 
 describe("Keys Service Database", async () => {
   const { db, sql } = await import("../../src/db/index.js");
-  const { orgs, apiKeys, appKeys, byokKeys, providerRequirements } = await import("../../src/db/schema.js");
-  const { cleanTestData, closeDb, insertTestOrg, insertTestApiKey, insertTestAppKey, insertTestByokKey, insertTestProviderRequirement } = await import("../helpers/test-db.js");
+  const { orgs, apiKeys, appKeys, orgKeys, providerRequirements } = await import("../../src/db/schema.js");
+  const { cleanTestData, closeDb, insertTestOrg, insertTestApiKey, insertTestAppKey, insertTestOrgKey, insertTestProviderRequirement } = await import("../helpers/test-db.js");
 
   beforeEach(async () => {
     await cleanTestData();
@@ -60,10 +60,10 @@ describe("Keys Service Database", async () => {
     });
   });
 
-  describe("byokKeys table", () => {
-    it("should create a BYOK key linked to org", async () => {
+  describe("orgKeys table", () => {
+    it("should create an org key linked to org", async () => {
       const org = await insertTestOrg();
-      const key = await insertTestByokKey(org.id, {
+      const key = await insertTestOrgKey(org.id, {
         provider: "anthropic",
         encryptedKey: "encrypted_value",
       });
@@ -74,10 +74,10 @@ describe("Keys Service Database", async () => {
 
     it("should enforce unique org+provider", async () => {
       const org = await insertTestOrg();
-      await insertTestByokKey(org.id, { provider: "apollo" });
+      await insertTestOrgKey(org.id, { provider: "apollo" });
 
       await expect(
-        insertTestByokKey(org.id, { provider: "apollo" })
+        insertTestOrgKey(org.id, { provider: "apollo" })
       ).rejects.toThrow();
     });
 
@@ -85,20 +85,20 @@ describe("Keys Service Database", async () => {
       const org1 = await insertTestOrg({ orgId: "org_1" });
       const org2 = await insertTestOrg({ orgId: "org_2" });
 
-      await insertTestByokKey(org1.id, { provider: "apollo" });
-      const key2 = await insertTestByokKey(org2.id, { provider: "apollo" });
+      await insertTestOrgKey(org1.id, { provider: "apollo" });
+      const key2 = await insertTestOrgKey(org2.id, { provider: "apollo" });
 
       expect(key2.id).toBeDefined();
     });
 
     it("should cascade delete when org is deleted", async () => {
       const org = await insertTestOrg();
-      const key = await insertTestByokKey(org.id);
+      const key = await insertTestOrgKey(org.id);
 
       await db.delete(orgs).where(eq(orgs.id, org.id));
 
-      const found = await db.query.byokKeys.findFirst({
-        where: eq(byokKeys.id, key.id),
+      const found = await db.query.orgKeys.findFirst({
+        where: eq(orgKeys.id, key.id),
       });
       expect(found).toBeUndefined();
     });
