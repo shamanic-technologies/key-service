@@ -35,8 +35,8 @@ app.get("/openapi.json", (_req, res) => {
 // Health check (public)
 app.use(healthRoutes);
 
-// API key validation (called by api-service with API key in header)
-app.use(validateRoutes);
+// API key validation (service-to-service, authenticated via X-API-Key)
+app.use(serviceKeyAuth, validateRoutes);
 
 // Unified key management (new canonical endpoints)
 app.use("/keys", serviceKeyAuth, keysRoutes);

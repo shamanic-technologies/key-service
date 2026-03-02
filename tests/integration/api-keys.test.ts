@@ -11,7 +11,7 @@ const SERVICE_KEY = "test-service-key-123";
 function createApp() {
   const app = express();
   app.use(express.json());
-  app.use(validateRoutes);
+  app.use(serviceKeyAuth, validateRoutes);
   app.use("/internal", serviceKeyAuth, internalRoutes);
   return app;
 }
@@ -231,7 +231,8 @@ describe("User API Keys", () => {
 
       const res = await request(app)
         .get("/validate")
-        .set("Authorization", `Bearer ${userKey}`);
+        .set("x-api-key", SERVICE_KEY)
+        .query({ key: userKey });
 
       expect(res.status).toBe(200);
       expect(res.body.valid).toBe(true);
@@ -245,7 +246,8 @@ describe("User API Keys", () => {
     it("should reject invalid user key", async () => {
       const res = await request(app)
         .get("/validate")
-        .set("Authorization", "Bearer distrib.usr_0000000000000000000000000000000000000000");
+        .set("x-api-key", SERVICE_KEY)
+        .query({ key: "distrib.usr_0000000000000000000000000000000000000000" });
 
       expect(res.status).toBe(401);
     });
@@ -253,9 +255,28 @@ describe("User API Keys", () => {
     it("should reject keys with unrecognized prefix", async () => {
       const res = await request(app)
         .get("/validate")
-        .set("Authorization", "Bearer unknown_0000000000000000000000000000000000000000");
+        .set("x-api-key", SERVICE_KEY)
+        .query({ key: "unknown_0000000000000000000000000000000000000000" });
 
       expect(res.status).toBe(401);
+    });
+
+    it("should reject request without key parameter", async () => {
+      const res = await request(app)
+        .get("/validate")
+        .set("x-api-key", SERVICE_KEY);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("key");
+    });
+
+    it("should reject request without service key auth", async () => {
+      const res = await request(app)
+        .get("/validate")
+        .query({ key: "distrib.usr_0000000000000000000000000000000000000000" });
+
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe("Invalid service key");
     });
   });
 

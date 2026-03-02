@@ -1,15 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import { eq } from "drizzle-orm";
-import { db } from "../db/index.js";
-import { apiKeys, apps } from "../db/schema.js";
-import { hashApiKey, isAppApiKey, hasValidPrefix } from "../lib/api-key.js";
-
-export interface AuthenticatedRequest extends Request {
-  orgId?: string;
-  appId?: string;
-  userId?: string;
-  authType?: "user_key" | "app_key";
-}
 
 /**
  * Authenticate via service API key (for service-to-service calls)
@@ -44,69 +33,4 @@ export function serviceKeyAuth(
   }
 
   next();
-}
-
-/**
- * Authenticate via API key (user key or app key)
- * - User keys (distrib.usr_* or legacy mcpf_usr_*): resolve to orgId
- * - App keys (distrib.app_* or legacy mcpf_app_*): resolve to appId
- */
-export async function apiKeyAuth(
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Missing authorization header" });
-    }
-
-    const key = authHeader.slice(7);
-
-    if (!hasValidPrefix(key)) {
-      return res.status(401).json({ error: "Invalid API key format" });
-    }
-
-    const keyHash = hashApiKey(key);
-
-    // App keys: look up in apps table
-    if (isAppApiKey(key)) {
-      const app = await db.query.apps.findFirst({
-        where: eq(apps.keyHash, keyHash),
-      });
-
-      if (!app) {
-        return res.status(401).json({ error: "Invalid API key" });
-      }
-
-      req.appId = app.name;
-      req.authType = "app_key";
-      return next();
-    }
-
-    // User keys: look up in apiKeys table
-    const apiKey = await db.query.apiKeys.findFirst({
-      where: eq(apiKeys.keyHash, keyHash),
-    });
-
-    if (!apiKey) {
-      return res.status(401).json({ error: "Invalid API key" });
-    }
-
-    // Update last used
-    await db
-      .update(apiKeys)
-      .set({ lastUsedAt: new Date() })
-      .where(eq(apiKeys.id, apiKey.id));
-
-    req.orgId = apiKey.orgId;
-    req.appId = apiKey.appId;
-    req.userId = apiKey.userId;
-    req.authType = "user_key";
-    next();
-  } catch (error) {
-    console.error("API key auth error:", error);
-    return res.status(401).json({ error: "Authentication failed" });
-  }
 }
