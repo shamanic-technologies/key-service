@@ -834,3 +834,173 @@ registry.registerPath({
     401: { description: "Unauthorized" },
   },
 });
+
+// ==================== Unified Key Endpoints (/keys) ====================
+
+export const KeySourceSchema = z.enum(["org", "app", "platform", "byok"]);
+
+export const ListKeysQuerySchema = z
+  .object({
+    keySource: KeySourceSchema,
+    orgId: z.string().min(1).optional(),
+    appId: z.string().min(1).optional(),
+  })
+  .openapi("ListKeysQuery");
+
+const UnifiedKeyItemSchema = z
+  .object({
+    provider: z.string(),
+    maskedKey: z.string(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+  })
+  .openapi("UnifiedKeyItem");
+
+const ListKeysResponseSchema = z
+  .object({
+    keys: z.array(UnifiedKeyItemSchema),
+  })
+  .openapi("ListKeysResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/keys",
+  summary: "List keys by source",
+  description:
+    "List stored keys filtered by keySource. Use keySource=org (requires orgId), keySource=app (requires appId), or keySource=platform (no scope).",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    query: ListKeysQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "List of keys",
+      content: { "application/json": { schema: ListKeysResponseSchema } },
+    },
+    400: { description: "Missing required parameters" },
+  },
+});
+
+export const UpsertKeyRequestSchema = z
+  .object({
+    keySource: KeySourceSchema,
+    provider: z.string().min(1),
+    apiKey: z.string().min(1),
+    orgId: z.string().min(1).optional(),
+    appId: z.string().min(1).optional(),
+  })
+  .refine(
+    (data) => {
+      const source = data.keySource === "byok" ? "org" : data.keySource;
+      if (source === "org") return !!data.orgId;
+      if (source === "app") return !!data.appId;
+      return true;
+    },
+    { message: "orgId required for keySource 'org', appId required for keySource 'app'" }
+  )
+  .openapi("UpsertKeyRequest");
+
+const UpsertKeyResponseSchema = z
+  .object({
+    provider: z.string(),
+    maskedKey: z.string(),
+    message: z.string(),
+  })
+  .openapi("UpsertKeyResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/keys",
+  summary: "Add or update a key",
+  description:
+    "Upsert a key. keySource determines scope: org (requires orgId), app (requires appId), platform (no scope). 'byok' is accepted as alias for 'org'.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    body: {
+      content: { "application/json": { schema: UpsertKeyRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Key saved",
+      content: { "application/json": { schema: UpsertKeyResponseSchema } },
+    },
+    400: { description: "Invalid request" },
+  },
+});
+
+export const DeleteKeyQuerySchema = z
+  .object({
+    keySource: KeySourceSchema,
+    orgId: z.string().min(1).optional(),
+    appId: z.string().min(1).optional(),
+  })
+  .openapi("DeleteKeyQuery");
+
+const DeleteKeyResponseSchema = z
+  .object({
+    provider: z.string(),
+    message: z.string(),
+  })
+  .openapi("DeleteKeyResponse");
+
+registry.registerPath({
+  method: "delete",
+  path: "/keys/{provider}",
+  summary: "Delete a key",
+  description:
+    "Delete a key by provider. keySource determines scope: org (requires orgId), app (requires appId), platform (no scope).",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    params: z.object({ provider: z.string() }),
+    query: DeleteKeyQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "Key deleted",
+      content: { "application/json": { schema: DeleteKeyResponseSchema } },
+    },
+    400: { description: "Invalid request" },
+  },
+});
+
+export const DecryptKeyQuerySchema = z
+  .object({
+    keySource: KeySourceSchema,
+    orgId: z.string().min(1).optional(),
+    appId: z.string().min(1).optional(),
+  })
+  .openapi("DecryptKeyQuery");
+
+const DecryptKeyResponseSchema = z
+  .object({
+    provider: z.string(),
+    key: z.string(),
+  })
+  .openapi("DecryptKeyResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/keys/{provider}/decrypt",
+  summary: "Get decrypted key",
+  description:
+    "Returns the decrypted key for a provider. keySource determines which store to query: org (requires orgId), app (requires appId), platform (no scope). 'byok' is accepted as alias for 'org'. Requires X-Caller-* headers for provider requirements tracking.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    params: z.object({ provider: z.string() }),
+    query: DecryptKeyQuerySchema,
+    headers: z.object({
+      "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
+      "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
+      "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/leads/search" }),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Decrypted key",
+      content: { "application/json": { schema: DecryptKeyResponseSchema } },
+    },
+    400: { description: "Missing required parameters or caller headers" },
+    404: { description: "Key not configured" },
+  },
+});

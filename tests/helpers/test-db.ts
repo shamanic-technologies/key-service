@@ -1,5 +1,5 @@
 import { db, sql } from "../../src/db/index.js";
-import { orgs, users, apiKeys, appKeys, apps, byokKeys, platformKeys, providerRequirements } from "../../src/db/schema.js";
+import { orgs, users, apiKeys, appKeys, apps, orgKeys, platformKeys, providerRequirements } from "../../src/db/schema.js";
 
 /**
  * Clean all test data from the database
@@ -8,7 +8,7 @@ export async function cleanTestData() {
   await db.delete(apiKeys);
   await db.delete(appKeys);
   await db.delete(platformKeys);
-  await db.delete(byokKeys);
+  await db.delete(orgKeys);
   await db.delete(providerRequirements);
   await db.delete(apps);
   await db.delete(users);
@@ -75,12 +75,12 @@ export async function insertTestApiKey(
 /**
  * Insert a test BYOK key
  */
-export async function insertTestByokKey(
+export async function insertTestOrgKey(
   orgId: string,
   data: { provider?: string; encryptedKey?: string } = {}
 ) {
   const [key] = await db
-    .insert(byokKeys)
+    .insert(orgKeys)
     .values({
       orgId,
       provider: data.provider || "apollo",

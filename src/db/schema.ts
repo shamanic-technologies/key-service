@@ -51,21 +51,21 @@ export const apiKeys = pgTable(
   ]
 );
 
-// BYOK keys (encrypted external API keys)
-export const byokKeys = pgTable(
-  "byok_keys",
+// Org keys (encrypted external API keys, scoped per org)
+export const orgKeys = pgTable(
+  "org_keys",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     orgId: uuid("org_id")
       .notNull()
       .references(() => orgs.id, { onDelete: "cascade" }),
-    provider: text("provider").notNull(), // 'apollo', 'anthropic', 'instantly', 'firecrawl'
+    provider: text("provider").notNull(),
     encryptedKey: text("encrypted_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("idx_byok_org_provider").on(table.orgId, table.provider),
+    uniqueIndex("idx_org_keys_org_provider").on(table.orgId, table.provider),
   ]
 );
 
@@ -75,8 +75,8 @@ export type Org = typeof orgs.$inferSelect;
 export type NewOrg = typeof orgs.$inferInsert;
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type NewApiKey = typeof apiKeys.$inferInsert;
-export type ByokKey = typeof byokKeys.$inferSelect;
-export type NewByokKey = typeof byokKeys.$inferInsert;
+export type OrgKey = typeof orgKeys.$inferSelect;
+export type NewOrgKey = typeof orgKeys.$inferInsert;
 
 // App keys (encrypted third-party API keys for apps, keyed by appId)
 export const appKeys = pgTable(

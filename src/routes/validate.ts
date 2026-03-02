@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { orgs, byokKeys } from "../db/schema.js";
+import { orgs, orgKeys } from "../db/schema.js";
 import { apiKeyAuth, AuthenticatedRequest } from "../middleware/auth.js";
 import { decrypt } from "../lib/crypto.js";
 import { extractCallerHeaders } from "../lib/caller-headers.js";
@@ -34,8 +34,8 @@ router.get("/validate", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ error: "Organization not found" });
     }
 
-    const keys = await db.query.byokKeys.findMany({
-      where: eq(byokKeys.orgId, req.orgId!),
+    const keys = await db.query.orgKeys.findMany({
+      where: eq(orgKeys.orgId, req.orgId!),
     });
 
     const configuredProviders = keys.map((k) => k.provider);
@@ -73,10 +73,10 @@ router.get("/validate/keys/:provider", apiKeyAuth, async (req: AuthenticatedRequ
       });
     }
 
-    const key = await db.query.byokKeys.findFirst({
+    const key = await db.query.orgKeys.findFirst({
       where: and(
-        eq(byokKeys.orgId, req.orgId!),
-        eq(byokKeys.provider, provider)
+        eq(orgKeys.orgId, req.orgId!),
+        eq(orgKeys.provider, provider)
       ),
     });
 

@@ -6,11 +6,12 @@
 import { Router, Request, Response } from "express";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { apiKeys, appKeys, apps, byokKeys, orgs, platformKeys, providerRequirements } from "../db/schema.js";
+import { apiKeys, appKeys, apps, orgKeys, orgs, platformKeys, providerRequirements } from "../db/schema.js";
 import { generateApiKey, generateAppApiKey, hashApiKey, getKeyPrefix } from "../lib/api-key.js";
 import { encrypt, decrypt, maskKey } from "../lib/crypto.js";
 import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
+import { ensureOrg } from "../lib/ensure-org.js";
 import {
   CreateApiKeyRequestSchema,
   DeleteApiKeyRequestSchema,
@@ -28,26 +29,7 @@ const router = Router();
 
 const VALID_PROVIDERS = ["apollo", "anthropic", "instantly", "firecrawl"];
 
-// No auth middleware needed - Railway private network
-
-/**
- * Ensure org exists, creating if needed
- */
-async function ensureOrg(orgId: string): Promise<string> {
-  let org = await db.query.orgs.findFirst({
-    where: eq(orgs.orgId, orgId),
-  });
-
-  if (!org) {
-    const [newOrg] = await db
-      .insert(orgs)
-      .values({ orgId })
-      .returning();
-    org = newOrg;
-  }
-
-  return org.id;
-}
+// Legacy routes — kept for backwards compatibility with existing services
 
 // ==================== API KEYS ====================
 
@@ -257,8 +239,8 @@ router.get("/keys", async (req: Request, res: Response) => {
 
     const orgId = await ensureOrg(externalOrgId);
 
-    const keys = await db.query.byokKeys.findMany({
-      where: eq(byokKeys.orgId, orgId),
+    const keys = await db.query.orgKeys.findMany({
+      where: eq(orgKeys.orgId, orgId),
     });
 
     const maskedKeys = keys.map((key) => ({
@@ -291,17 +273,17 @@ router.post("/keys", async (req: Request, res: Response) => {
     const encryptedKey = encrypt(apiKey);
 
     // Upsert
-    const existing = await db.query.byokKeys.findFirst({
-      where: and(eq(byokKeys.orgId, orgId), eq(byokKeys.provider, provider)),
+    const existing = await db.query.orgKeys.findFirst({
+      where: and(eq(orgKeys.orgId, orgId), eq(orgKeys.provider, provider)),
     });
 
     if (existing) {
       await db
-        .update(byokKeys)
+        .update(orgKeys)
         .set({ encryptedKey, updatedAt: new Date() })
-        .where(eq(byokKeys.id, existing.id));
+        .where(eq(orgKeys.id, existing.id));
     } else {
-      await db.insert(byokKeys).values({
+      await db.insert(orgKeys).values({
         orgId,
         provider,
         encryptedKey,
@@ -340,8 +322,8 @@ router.delete("/keys/:provider", async (req: Request, res: Response) => {
     const orgId = await ensureOrg(externalOrgId);
 
     await db
-      .delete(byokKeys)
-      .where(and(eq(byokKeys.orgId, orgId), eq(byokKeys.provider, provider)));
+      .delete(orgKeys)
+      .where(and(eq(orgKeys.orgId, orgId), eq(orgKeys.provider, provider)));
 
     res.json({
       provider,
@@ -376,8 +358,8 @@ router.get("/keys/:provider/decrypt", async (req: Request, res: Response) => {
 
     const orgId = await ensureOrg(externalOrgId);
 
-    const key = await db.query.byokKeys.findFirst({
-      where: and(eq(byokKeys.orgId, orgId), eq(byokKeys.provider, provider)),
+    const key = await db.query.orgKeys.findFirst({
+      where: and(eq(orgKeys.orgId, orgId), eq(orgKeys.provider, provider)),
     });
 
     if (!key) {
