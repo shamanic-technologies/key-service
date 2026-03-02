@@ -33,8 +33,8 @@ describe("Provider Requirements", () => {
 
   // ==================== Caller header validation ====================
 
-  describe("Caller header validation on BYOK decrypt", () => {
-    it("should return 400 without caller headers on BYOK decrypt", async () => {
+  describe("Caller header validation on org key decrypt", () => {
+    it("should return 400 without caller headers on org key decrypt", async () => {
       const res = await request(app)
         .get("/internal/keys/apollo/decrypt")
         .query({ orgId: "org_test" });
@@ -54,11 +54,10 @@ describe("Provider Requirements", () => {
     });
   });
 
-  describe("Caller header validation on app key decrypt", () => {
-    it("should return 400 without caller headers on app key decrypt", async () => {
+  describe("Caller header validation on platform key decrypt", () => {
+    it("should return 400 without caller headers on platform key decrypt", async () => {
       const res = await request(app)
-        .get("/internal/app-keys/stripe/decrypt")
-        .query({ appId: "myapp" });
+        .get("/internal/platform-keys/stripe/decrypt");
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain("X-Caller-Service");
@@ -68,21 +67,21 @@ describe("Provider Requirements", () => {
   // ==================== Provider requirement recording ====================
 
   describe("Provider requirement recording", () => {
-    it("should record a provider requirement on app key decrypt", async () => {
-      // Create an app key first
+    it("should record a provider requirement on org key decrypt", async () => {
+      // Create an org key first
       await request(app)
-        .post("/internal/app-keys")
-        .send({ appId: "myapp", provider: "stripe", apiKey: "sk_live_test" });
+        .post("/internal/keys")
+        .send({ orgId: "org-1", provider: "stripe", apiKey: "sk_live_test" });
 
       // Decrypt with caller headers
       const res = await request(app)
-        .get("/internal/app-keys/stripe/decrypt")
+        .get("/internal/keys/stripe/decrypt")
         .set({
           "x-caller-service": "payment-service",
           "x-caller-method": "POST",
           "x-caller-path": "/payments/charge",
         })
-        .query({ appId: "myapp" });
+        .query({ orgId: "org-1" });
 
       expect(res.status).toBe(200);
 
@@ -99,16 +98,45 @@ describe("Provider Requirements", () => {
       expect(reqs[0].path).toBe("/payments/charge");
     });
 
+    it("should record a provider requirement on platform key decrypt", async () => {
+      // Create a platform key first
+      await request(app)
+        .post("/internal/platform-keys")
+        .send({ provider: "anthropic", apiKey: "sk-ant-test" });
+
+      // Decrypt with caller headers
+      const res = await request(app)
+        .get("/internal/platform-keys/anthropic/decrypt")
+        .set({
+          "x-caller-service": "ai-service",
+          "x-caller-method": "POST",
+          "x-caller-path": "/generate",
+        });
+
+      expect(res.status).toBe(200);
+
+      const reqs = await db.query.providerRequirements.findMany({
+        where: and(
+          eq(providerRequirements.service, "ai-service"),
+          eq(providerRequirements.provider, "anthropic")
+        ),
+      });
+
+      expect(reqs).toHaveLength(1);
+      expect(reqs[0].method).toBe("POST");
+      expect(reqs[0].path).toBe("/generate");
+    });
+
     it("should update lastSeenAt on repeat calls (upsert)", async () => {
       await request(app)
-        .post("/internal/app-keys")
-        .send({ appId: "myapp", provider: "stripe", apiKey: "sk_live_test" });
+        .post("/internal/keys")
+        .send({ orgId: "org-1", provider: "stripe", apiKey: "sk_live_test" });
 
       // First call
       await request(app)
-        .get("/internal/app-keys/stripe/decrypt")
+        .get("/internal/keys/stripe/decrypt")
         .set(callerHeaders)
-        .query({ appId: "myapp" });
+        .query({ orgId: "org-1" });
 
       const firstReqs = await db.query.providerRequirements.findMany();
       expect(firstReqs).toHaveLength(1);
@@ -119,9 +147,9 @@ describe("Provider Requirements", () => {
 
       // Second call
       await request(app)
-        .get("/internal/app-keys/stripe/decrypt")
+        .get("/internal/keys/stripe/decrypt")
         .set(callerHeaders)
-        .query({ appId: "myapp" });
+        .query({ orgId: "org-1" });
 
       const secondReqs = await db.query.providerRequirements.findMany();
       expect(secondReqs).toHaveLength(1); // Still 1 row, not 2
@@ -130,37 +158,37 @@ describe("Provider Requirements", () => {
 
     it("should record multiple providers for the same endpoint", async () => {
       await request(app)
-        .post("/internal/app-keys")
-        .send({ appId: "myapp", provider: "openai", apiKey: "sk-test1" });
+        .post("/internal/keys")
+        .send({ orgId: "org-1", provider: "openai", apiKey: "sk-test1" });
       await request(app)
-        .post("/internal/app-keys")
-        .send({ appId: "myapp", provider: "anthropic", apiKey: "sk-ant-test1" });
+        .post("/internal/keys")
+        .send({ orgId: "org-1", provider: "anthropic", apiKey: "sk-ant-test1" });
 
       // Same caller, different providers
       await request(app)
-        .get("/internal/app-keys/openai/decrypt")
+        .get("/internal/keys/openai/decrypt")
         .set(callerHeaders)
-        .query({ appId: "myapp" });
+        .query({ orgId: "org-1" });
 
       await request(app)
-        .get("/internal/app-keys/anthropic/decrypt")
+        .get("/internal/keys/anthropic/decrypt")
         .set(callerHeaders)
-        .query({ appId: "myapp" });
+        .query({ orgId: "org-1" });
 
       const reqs = await db.query.providerRequirements.findMany({
         where: eq(providerRequirements.service, "apollo"),
       });
 
       expect(reqs).toHaveLength(2);
-      const providers = reqs.map((r) => r.provider).sort();
-      expect(providers).toEqual(["anthropic", "openai"]);
+      const providerNames = reqs.map((r) => r.provider).sort();
+      expect(providerNames).toEqual(["anthropic", "openai"]);
     });
 
     it("should not record when key is not found (404)", async () => {
       const res = await request(app)
-        .get("/internal/app-keys/stripe/decrypt")
+        .get("/internal/keys/stripe/decrypt")
         .set(callerHeaders)
-        .query({ appId: "nonexistent" });
+        .query({ orgId: "nonexistent" });
 
       expect(res.status).toBe(404);
 

@@ -1,10 +1,19 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { eq } from "drizzle-orm";
 
 describe("Keys Service Database", async () => {
   const { db, sql } = await import("../../src/db/index.js");
-  const { orgs, apiKeys, appKeys, orgKeys, providerRequirements } = await import("../../src/db/schema.js");
-  const { cleanTestData, closeDb, insertTestOrg, insertTestApiKey, insertTestAppKey, insertTestOrgKey, insertTestProviderRequirement } = await import("../helpers/test-db.js");
+  const { providers, userAuthKeys, orgKeys, platformKeys, orgProviderKeySources, providerRequirements } = await import("../../src/db/schema.js");
+  const {
+    cleanTestData,
+    closeDb,
+    insertTestProvider,
+    insertTestUserAuthKey,
+    insertTestOrgKey,
+    insertTestPlatformKey,
+    insertTestOrgProviderKeySource,
+    insertTestProviderRequirement,
+  } = await import("../helpers/test-db.js");
 
   beforeEach(async () => {
     await cleanTestData();
@@ -15,87 +24,88 @@ describe("Keys Service Database", async () => {
     await closeDb();
   });
 
-  describe("orgs table", () => {
-    it("should create and query an org", async () => {
-      const org = await insertTestOrg({ orgId: "org_test123" });
+  describe("providers table", () => {
+    it("should create a provider", async () => {
+      const provider = await insertTestProvider({ name: "anthropic" });
 
-      expect(org.id).toBeDefined();
-      expect(org.orgId).toBe("org_test123");
+      expect(provider.id).toBeDefined();
+      expect(provider.name).toBe("anthropic");
+    });
+
+    it("should enforce unique name", async () => {
+      await insertTestProvider({ name: "anthropic" });
+
+      await expect(
+        insertTestProvider({ name: "anthropic" })
+      ).rejects.toThrow();
     });
   });
 
-  describe("apiKeys table", () => {
-    it("should create an API key linked to org", async () => {
-      const org = await insertTestOrg();
-      const key = await insertTestApiKey(org.id, {
+  describe("userAuthKeys table", () => {
+    it("should create a user auth key", async () => {
+      const key = await insertTestUserAuthKey({
+        orgId: "org-test-123",
         keyHash: "abc123hash",
         keyPrefix: "distrib.usr_",
         name: "Production Key",
       });
 
       expect(key.id).toBeDefined();
+      expect(key.orgId).toBe("org-test-123");
       expect(key.keyHash).toBe("abc123hash");
       expect(key.keyPrefix).toBe("distrib.usr_");
     });
 
     it("should enforce unique keyHash", async () => {
-      const org = await insertTestOrg();
-      await insertTestApiKey(org.id, { keyHash: "unique_hash" });
+      await insertTestUserAuthKey({ keyHash: "unique_hash" });
 
       await expect(
-        insertTestApiKey(org.id, { keyHash: "unique_hash" })
+        insertTestUserAuthKey({ keyHash: "unique_hash" })
       ).rejects.toThrow();
     });
 
-    it("should cascade delete when org is deleted", async () => {
-      const org = await insertTestOrg();
-      const key = await insertTestApiKey(org.id);
+    it("should store orgId as text (not FK)", async () => {
+      const key = await insertTestUserAuthKey({ orgId: "any-string-org-id" });
 
-      await db.delete(orgs).where(eq(orgs.id, org.id));
-
-      const found = await db.query.apiKeys.findFirst({
-        where: eq(apiKeys.id, key.id),
-      });
-      expect(found).toBeUndefined();
+      expect(key.orgId).toBe("any-string-org-id");
     });
   });
 
   describe("orgKeys table", () => {
-    it("should create an org key linked to org", async () => {
-      const org = await insertTestOrg();
-      const key = await insertTestOrgKey(org.id, {
-        provider: "anthropic",
+    it("should create an org key linked to provider", async () => {
+      const provider = await insertTestProvider({ name: "anthropic" });
+      const key = await insertTestOrgKey(provider.id, {
+        orgId: "org-test",
         encryptedKey: "encrypted_value",
       });
 
       expect(key.id).toBeDefined();
-      expect(key.provider).toBe("anthropic");
+      expect(key.orgId).toBe("org-test");
+      expect(key.providerId).toBe(provider.id);
     });
 
     it("should enforce unique org+provider", async () => {
-      const org = await insertTestOrg();
-      await insertTestOrgKey(org.id, { provider: "apollo" });
+      const provider = await insertTestProvider({ name: "apollo" });
+      await insertTestOrgKey(provider.id, { orgId: "org-1" });
 
       await expect(
-        insertTestOrgKey(org.id, { provider: "apollo" })
+        insertTestOrgKey(provider.id, { orgId: "org-1" })
       ).rejects.toThrow();
     });
 
     it("should allow same provider for different orgs", async () => {
-      const org1 = await insertTestOrg({ orgId: "org_1" });
-      const org2 = await insertTestOrg({ orgId: "org_2" });
-
-      await insertTestOrgKey(org1.id, { provider: "apollo" });
-      const key2 = await insertTestOrgKey(org2.id, { provider: "apollo" });
+      const provider = await insertTestProvider({ name: "apollo" });
+      await insertTestOrgKey(provider.id, { orgId: "org-1" });
+      const key2 = await insertTestOrgKey(provider.id, { orgId: "org-2" });
 
       expect(key2.id).toBeDefined();
     });
 
-    it("should cascade delete when org is deleted", async () => {
-      const org = await insertTestOrg();
-      const key = await insertTestOrgKey(org.id);
+    it("should cascade delete when provider is deleted", async () => {
+      const provider = await insertTestProvider({ name: "temp-provider" });
+      const key = await insertTestOrgKey(provider.id);
 
-      await db.delete(orgs).where(eq(orgs.id, org.id));
+      await db.delete(providers).where(eq(providers.id, provider.id));
 
       const found = await db.query.orgKeys.findFirst({
         where: eq(orgKeys.id, key.id),
@@ -104,39 +114,78 @@ describe("Keys Service Database", async () => {
     });
   });
 
-  describe("appKeys table", () => {
-    it("should create an app key", async () => {
-      const key = await insertTestAppKey({
-        appId: "polaritycourse",
-        provider: "stripe",
-        encryptedKey: "encrypted_value",
-      });
+  describe("platformKeys table", () => {
+    it("should create a platform key linked to provider", async () => {
+      const provider = await insertTestProvider({ name: "openai" });
+      const key = await insertTestPlatformKey(provider.id);
 
       expect(key.id).toBeDefined();
-      expect(key.appId).toBe("polaritycourse");
-      expect(key.provider).toBe("stripe");
+      expect(key.providerId).toBe(provider.id);
     });
 
-    it("should enforce unique appId+provider", async () => {
-      await insertTestAppKey({ appId: "myapp", provider: "stripe" });
+    it("should enforce unique provider", async () => {
+      const provider = await insertTestProvider({ name: "openai" });
+      await insertTestPlatformKey(provider.id);
 
       await expect(
-        insertTestAppKey({ appId: "myapp", provider: "stripe" })
+        insertTestPlatformKey(provider.id)
       ).rejects.toThrow();
     });
 
-    it("should allow same provider for different apps", async () => {
-      await insertTestAppKey({ appId: "app1", provider: "stripe" });
-      const key2 = await insertTestAppKey({ appId: "app2", provider: "stripe" });
+    it("should cascade delete when provider is deleted", async () => {
+      const provider = await insertTestProvider({ name: "temp-provider" });
+      const key = await insertTestPlatformKey(provider.id);
 
-      expect(key2.id).toBeDefined();
+      await db.delete(providers).where(eq(providers.id, provider.id));
+
+      const found = await db.query.platformKeys.findFirst({
+        where: eq(platformKeys.id, key.id),
+      });
+      expect(found).toBeUndefined();
+    });
+  });
+
+  describe("orgProviderKeySources table", () => {
+    it("should create a key source preference", async () => {
+      const provider = await insertTestProvider({ name: "anthropic" });
+      const pref = await insertTestOrgProviderKeySource({
+        orgId: "org-1",
+        providerId: provider.id,
+        keySource: "org",
+      });
+
+      expect(pref.id).toBeDefined();
+      expect(pref.orgId).toBe("org-1");
+      expect(pref.keySource).toBe("org");
     });
 
-    it("should allow different providers for same app", async () => {
-      await insertTestAppKey({ appId: "myapp", provider: "stripe" });
-      const key2 = await insertTestAppKey({ appId: "myapp", provider: "openai" });
+    it("should enforce unique org+provider", async () => {
+      const provider = await insertTestProvider({ name: "anthropic" });
+      await insertTestOrgProviderKeySource({ orgId: "org-1", providerId: provider.id });
 
-      expect(key2.id).toBeDefined();
+      await expect(
+        insertTestOrgProviderKeySource({ orgId: "org-1", providerId: provider.id })
+      ).rejects.toThrow();
+    });
+
+    it("should allow same provider for different orgs", async () => {
+      const provider = await insertTestProvider({ name: "anthropic" });
+      await insertTestOrgProviderKeySource({ orgId: "org-1", providerId: provider.id });
+      const pref2 = await insertTestOrgProviderKeySource({ orgId: "org-2", providerId: provider.id });
+
+      expect(pref2.id).toBeDefined();
+    });
+
+    it("should cascade delete when provider is deleted", async () => {
+      const provider = await insertTestProvider({ name: "temp-provider" });
+      const pref = await insertTestOrgProviderKeySource({ orgId: "org-1", providerId: provider.id });
+
+      await db.delete(providers).where(eq(providers.id, provider.id));
+
+      const found = await db.query.orgProviderKeySources.findFirst({
+        where: eq(orgProviderKeySources.id, pref.id),
+      });
+      expect(found).toBeUndefined();
     });
   });
 

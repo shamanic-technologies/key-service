@@ -86,40 +86,6 @@ describe("Unified /keys endpoints", () => {
       expect(res.status).toBe(400);
     });
 
-    it("GET /keys/:provider/decrypt — should return decrypted org key", async () => {
-      await request(app)
-        .post("/keys")
-        .send({ keySource: "org", orgId: "org-1", provider: "anthropic", apiKey: "sk-ant-secret" });
-
-      const res = await request(app)
-        .get("/keys/anthropic/decrypt")
-        .set(callerHeaders)
-        .query({ keySource: "org", orgId: "org-1" });
-
-      expect(res.status).toBe(200);
-      expect(res.body.provider).toBe("anthropic");
-      expect(res.body.key).toBe("sk-ant-secret");
-    });
-
-    it("GET /keys/:provider/decrypt — should return 404 for missing key", async () => {
-      const res = await request(app)
-        .get("/keys/anthropic/decrypt")
-        .set(callerHeaders)
-        .query({ keySource: "org", orgId: "org-missing" });
-
-      expect(res.status).toBe(404);
-      expect(res.body.error).toContain("anthropic");
-    });
-
-    it("GET /keys/:provider/decrypt — should reject missing caller headers", async () => {
-      const res = await request(app)
-        .get("/keys/anthropic/decrypt")
-        .query({ keySource: "org", orgId: "org-1" });
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toContain("X-Caller-Service");
-    });
-
     it("DELETE /keys/:provider — should delete an org key", async () => {
       await request(app)
         .post("/keys")
@@ -131,75 +97,12 @@ describe("Unified /keys endpoints", () => {
 
       expect(res.status).toBe(200);
 
-      const decryptRes = await request(app)
-        .get("/keys/anthropic/decrypt")
-        .set(callerHeaders)
+      // Verify it's gone by listing
+      const listRes = await request(app)
+        .get("/keys")
         .query({ keySource: "org", orgId: "org-1" });
 
-      expect(decryptRes.status).toBe(404);
-    });
-  });
-
-  // ==================== APP KEYS ====================
-
-  describe("keySource=app", () => {
-    it("POST /keys — should create an app key", async () => {
-      const res = await request(app)
-        .post("/keys")
-        .send({ keySource: "app", appId: "my-app", provider: "stripe", apiKey: "sk_test_abc" });
-
-      expect(res.status).toBe(200);
-      expect(res.body.provider).toBe("stripe");
-      expect(res.body.maskedKey).toBeDefined();
-    });
-
-    it("POST /keys — should reject missing appId", async () => {
-      const res = await request(app)
-        .post("/keys")
-        .send({ keySource: "app", provider: "stripe", apiKey: "sk_test_abc" });
-
-      expect(res.status).toBe(400);
-    });
-
-    it("GET /keys — should list app keys", async () => {
-      await request(app)
-        .post("/keys")
-        .send({ keySource: "app", appId: "my-app", provider: "stripe", apiKey: "sk_test_abc" });
-
-      const res = await request(app)
-        .get("/keys")
-        .query({ keySource: "app", appId: "my-app" });
-
-      expect(res.status).toBe(200);
-      expect(res.body.keys).toHaveLength(1);
-      expect(res.body.keys[0].provider).toBe("stripe");
-    });
-
-    it("GET /keys/:provider/decrypt — should return decrypted app key", async () => {
-      await request(app)
-        .post("/keys")
-        .send({ keySource: "app", appId: "my-app", provider: "stripe", apiKey: "sk_live_secret" });
-
-      const res = await request(app)
-        .get("/keys/stripe/decrypt")
-        .set(callerHeaders)
-        .query({ keySource: "app", appId: "my-app" });
-
-      expect(res.status).toBe(200);
-      expect(res.body.provider).toBe("stripe");
-      expect(res.body.key).toBe("sk_live_secret");
-    });
-
-    it("DELETE /keys/:provider — should delete an app key", async () => {
-      await request(app)
-        .post("/keys")
-        .send({ keySource: "app", appId: "my-app", provider: "stripe", apiKey: "sk_test_abc" });
-
-      const res = await request(app)
-        .delete("/keys/stripe")
-        .query({ keySource: "app", appId: "my-app" });
-
-      expect(res.status).toBe(200);
+      expect(listRes.body.keys).toHaveLength(0);
     });
   });
 
@@ -226,20 +129,6 @@ describe("Unified /keys endpoints", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.keys).toHaveLength(1);
-    });
-
-    it("GET /keys/:provider/decrypt — should return decrypted platform key", async () => {
-      await request(app)
-        .post("/keys")
-        .send({ keySource: "platform", provider: "anthropic", apiKey: "sk-ant-platform-secret" });
-
-      const res = await request(app)
-        .get("/keys/anthropic/decrypt")
-        .set(callerHeaders)
-        .query({ keySource: "platform" });
-
-      expect(res.status).toBe(200);
-      expect(res.body.key).toBe("sk-ant-platform-secret");
     });
 
     it("DELETE /keys/:provider — should delete a platform key", async () => {
@@ -280,39 +169,262 @@ describe("Unified /keys endpoints", () => {
       expect(res.body.keys).toHaveLength(1);
     });
 
-    it("GET /keys/:provider/decrypt — should work with keySource=byok", async () => {
-      await request(app)
-        .post("/keys")
-        .send({ keySource: "byok", orgId: "org-1", provider: "anthropic", apiKey: "sk-ant-byok-secret" });
-
-      const res = await request(app)
-        .get("/keys/anthropic/decrypt")
-        .set(callerHeaders)
-        .query({ keySource: "byok", orgId: "org-1" });
-
-      expect(res.status).toBe(200);
-      expect(res.body.key).toBe("sk-ant-byok-secret");
-    });
-
     it("should share the same store as keySource=org", async () => {
       await request(app)
         .post("/keys")
         .send({ keySource: "byok", orgId: "org-1", provider: "anthropic", apiKey: "sk-ant-shared" });
 
+      // List via org
       const res = await request(app)
-        .get("/keys/anthropic/decrypt")
-        .set(callerHeaders)
+        .get("/keys")
         .query({ keySource: "org", orgId: "org-1" });
 
       expect(res.status).toBe(200);
-      expect(res.body.key).toBe("sk-ant-shared");
+      expect(res.body.keys).toHaveLength(1);
+    });
+  });
+
+  // ==================== DECRYPT (AUTO-RESOLVE) ====================
+
+  describe("GET /keys/:provider/decrypt (auto-resolve)", () => {
+    it("should default to platform key when no preference set", async () => {
+      // Store a platform key
+      await request(app)
+        .post("/keys")
+        .send({ keySource: "platform", provider: "anthropic", apiKey: "sk-ant-platform-secret" });
+
+      const res = await request(app)
+        .get("/keys/anthropic/decrypt")
+        .set(callerHeaders)
+        .query({ orgId: "org-1" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.key).toBe("sk-ant-platform-secret");
+      expect(res.body.keySource).toBe("platform");
+    });
+
+    it("should use org key when preference is set to org", async () => {
+      // Store both keys
+      await request(app)
+        .post("/keys")
+        .send({ keySource: "platform", provider: "anthropic", apiKey: "sk-ant-platform" });
+      await request(app)
+        .post("/keys")
+        .send({ keySource: "org", orgId: "org-1", provider: "anthropic", apiKey: "sk-ant-org-secret" });
+
+      // Set preference to org
+      await request(app)
+        .put("/keys/anthropic/source")
+        .send({ orgId: "org-1", keySource: "org" });
+
+      const res = await request(app)
+        .get("/keys/anthropic/decrypt")
+        .set(callerHeaders)
+        .query({ orgId: "org-1" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.key).toBe("sk-ant-org-secret");
+      expect(res.body.keySource).toBe("org");
+    });
+
+    it("should switch back to platform when preference is changed", async () => {
+      // Store both keys
+      await request(app)
+        .post("/keys")
+        .send({ keySource: "platform", provider: "anthropic", apiKey: "sk-ant-platform" });
+      await request(app)
+        .post("/keys")
+        .send({ keySource: "org", orgId: "org-1", provider: "anthropic", apiKey: "sk-ant-org" });
+
+      // Set to org, then back to platform
+      await request(app)
+        .put("/keys/anthropic/source")
+        .send({ orgId: "org-1", keySource: "org" });
+      await request(app)
+        .put("/keys/anthropic/source")
+        .send({ orgId: "org-1", keySource: "platform" });
+
+      const res = await request(app)
+        .get("/keys/anthropic/decrypt")
+        .set(callerHeaders)
+        .query({ orgId: "org-1" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.key).toBe("sk-ant-platform");
+      expect(res.body.keySource).toBe("platform");
+    });
+
+    it("should return 404 when no key exists for resolved source", async () => {
+      const res = await request(app)
+        .get("/keys/anthropic/decrypt")
+        .set(callerHeaders)
+        .query({ orgId: "org-1" });
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should reject missing caller headers", async () => {
+      const res = await request(app)
+        .get("/keys/anthropic/decrypt")
+        .query({ orgId: "org-1" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("X-Caller-Service");
+    });
+
+    it("should reject missing orgId", async () => {
+      const res = await request(app)
+        .get("/keys/anthropic/decrypt")
+        .set(callerHeaders);
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ==================== KEY SOURCE PREFERENCES ====================
+
+  describe("PUT /keys/:provider/source", () => {
+    it("should set key source to org when org key exists", async () => {
+      // Store org key first
+      await request(app)
+        .post("/keys")
+        .send({ keySource: "org", orgId: "org-1", provider: "anthropic", apiKey: "sk-ant-org" });
+
+      const res = await request(app)
+        .put("/keys/anthropic/source")
+        .send({ orgId: "org-1", keySource: "org" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.provider).toBe("anthropic");
+      expect(res.body.orgId).toBe("org-1");
+      expect(res.body.keySource).toBe("org");
+    });
+
+    it("should reject switching to org when no org key stored", async () => {
+      const res = await request(app)
+        .put("/keys/anthropic/source")
+        .send({ orgId: "org-1", keySource: "org" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("No org key stored");
+    });
+
+    it("should allow switching to platform without any keys stored", async () => {
+      const res = await request(app)
+        .put("/keys/anthropic/source")
+        .send({ orgId: "org-1", keySource: "platform" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.keySource).toBe("platform");
+    });
+
+    it("should upsert preference (update on second call)", async () => {
+      await request(app)
+        .post("/keys")
+        .send({ keySource: "org", orgId: "org-1", provider: "anthropic", apiKey: "sk-ant-org" });
+
+      // Set to org
+      await request(app)
+        .put("/keys/anthropic/source")
+        .send({ orgId: "org-1", keySource: "org" });
+
+      // Update to platform
+      const res = await request(app)
+        .put("/keys/anthropic/source")
+        .send({ orgId: "org-1", keySource: "platform" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.keySource).toBe("platform");
+    });
+  });
+
+  describe("GET /keys/:provider/source", () => {
+    it("should return platform as default when no preference set", async () => {
+      const res = await request(app)
+        .get("/keys/anthropic/source")
+        .query({ orgId: "org-1" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.provider).toBe("anthropic");
+      expect(res.body.orgId).toBe("org-1");
+      expect(res.body.keySource).toBe("platform");
+      expect(res.body.isDefault).toBe(true);
+    });
+
+    it("should return explicit preference when set", async () => {
+      await request(app)
+        .post("/keys")
+        .send({ keySource: "org", orgId: "org-1", provider: "anthropic", apiKey: "sk-ant-org" });
+      await request(app)
+        .put("/keys/anthropic/source")
+        .send({ orgId: "org-1", keySource: "org" });
+
+      const res = await request(app)
+        .get("/keys/anthropic/source")
+        .query({ orgId: "org-1" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.keySource).toBe("org");
+      expect(res.body.isDefault).toBe(false);
+    });
+
+    it("should reject missing orgId", async () => {
+      const res = await request(app)
+        .get("/keys/anthropic/source");
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe("GET /keys/sources", () => {
+    it("should return empty when no preferences set", async () => {
+      const res = await request(app)
+        .get("/keys/sources")
+        .query({ orgId: "org-1" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.sources).toHaveLength(0);
+    });
+
+    it("should list all explicit preferences for an org", async () => {
+      // Store org keys
+      await request(app)
+        .post("/keys")
+        .send({ keySource: "org", orgId: "org-1", provider: "anthropic", apiKey: "sk-ant" });
+      await request(app)
+        .post("/keys")
+        .send({ keySource: "org", orgId: "org-1", provider: "openai", apiKey: "sk-oai" });
+
+      // Set preferences
+      await request(app)
+        .put("/keys/anthropic/source")
+        .send({ orgId: "org-1", keySource: "org" });
+      await request(app)
+        .put("/keys/openai/source")
+        .send({ orgId: "org-1", keySource: "org" });
+
+      const res = await request(app)
+        .get("/keys/sources")
+        .query({ orgId: "org-1" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.sources).toHaveLength(2);
+      const providers = res.body.sources.map((s: { provider: string }) => s.provider).sort();
+      expect(providers).toEqual(["anthropic", "openai"]);
+    });
+
+    it("should reject missing orgId", async () => {
+      const res = await request(app)
+        .get("/keys/sources");
+
+      expect(res.status).toBe(400);
     });
   });
 
   // ==================== VALIDATION ====================
 
   describe("validation errors", () => {
-    it("should reject missing keySource", async () => {
+    it("should reject missing keySource on list", async () => {
       const res = await request(app)
         .get("/keys")
         .query({ orgId: "org-1" });

@@ -34,7 +34,7 @@ describe("User API Keys", () => {
   });
 
   describe("POST /internal/api-keys", () => {
-    it("should create a user API key with appId, orgId, userId, createdBy", async () => {
+    it("should create a user API key with orgId, userId, createdBy", async () => {
       const userId = randomId();
       const createdBy = randomId();
 
@@ -42,7 +42,6 @@ describe("User API Keys", () => {
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
         .send({
-          appId: "distribute-frontend",
           orgId: "org-uuid-123",
           userId,
           createdBy,
@@ -52,7 +51,6 @@ describe("User API Keys", () => {
       expect(res.status).toBe(200);
       expect(res.body.key).toMatch(/^distrib\.usr_/);
       expect(res.body.name).toBe("Polarity Course — Kevin");
-      expect(res.body.appId).toBe("distribute-frontend");
       expect(res.body.orgId).toBe("org-uuid-123");
       expect(res.body.userId).toBe(userId);
       expect(res.body.createdBy).toBe(createdBy);
@@ -69,21 +67,6 @@ describe("User API Keys", () => {
       expect(res.status).toBe(400);
     });
 
-    it("should reject request with invalid userId format", async () => {
-      const res = await request(app)
-        .post("/internal/api-keys")
-        .set("x-api-key", SERVICE_KEY)
-        .send({
-          appId: "test-app",
-          orgId: "org-uuid",
-          userId: "not-a-uuid",
-          createdBy: randomId(),
-          name: "Test",
-        });
-
-      expect(res.status).toBe(400);
-    });
-
     it("should allow different createdBy than userId (admin creates for member)", async () => {
       const userId = randomId();
       const adminId = randomId();
@@ -92,7 +75,6 @@ describe("User API Keys", () => {
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
         .send({
-          appId: "test-app",
           orgId: "org-uuid-admin",
           userId,
           createdBy: adminId,
@@ -106,14 +88,13 @@ describe("User API Keys", () => {
   });
 
   describe("GET /internal/api-keys", () => {
-    it("should list keys for an org with new fields", async () => {
+    it("should list keys for an org", async () => {
       const userId = randomId();
 
       await request(app)
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
         .send({
-          appId: "test-app",
           orgId: "org-list-test",
           userId,
           createdBy: userId,
@@ -127,7 +108,6 @@ describe("User API Keys", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.keys).toHaveLength(1);
-      expect(res.body.keys[0].appId).toBe("test-app");
       expect(res.body.keys[0].orgId).toBe("org-list-test");
       expect(res.body.keys[0].userId).toBe(userId);
       expect(res.body.keys[0].createdBy).toBe(userId);
@@ -138,12 +118,10 @@ describe("User API Keys", () => {
       const user1 = randomId();
       const user2 = randomId();
 
-      // Create keys for two different users in same org
       await request(app)
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
         .send({
-          appId: "test-app",
           orgId: "org-filter-test",
           userId: user1,
           createdBy: user1,
@@ -154,14 +132,12 @@ describe("User API Keys", () => {
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
         .send({
-          appId: "test-app",
           orgId: "org-filter-test",
           userId: user2,
           createdBy: user2,
           name: "User 2 Key",
         });
 
-      // List all — should have 2
       const allRes = await request(app)
         .get("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
@@ -169,7 +145,6 @@ describe("User API Keys", () => {
 
       expect(allRes.body.keys).toHaveLength(2);
 
-      // Filter by user1 — should have 1
       const filteredRes = await request(app)
         .get("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
@@ -188,7 +163,6 @@ describe("User API Keys", () => {
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
         .send({
-          appId: "test-app",
           orgId: "org-delete-test",
           userId,
           createdBy: userId,
@@ -202,7 +176,6 @@ describe("User API Keys", () => {
 
       expect(res.status).toBe(200);
 
-      // Verify deleted
       const list = await request(app)
         .get("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
@@ -213,14 +186,13 @@ describe("User API Keys", () => {
   });
 
   describe("GET /validate with user key", () => {
-    it("should return appId, orgId, userId for user keys", async () => {
+    it("should return orgId, userId for user keys", async () => {
       const userId = randomId();
 
       const create = await request(app)
         .post("/internal/api-keys")
         .set("x-api-key", SERVICE_KEY)
         .send({
-          appId: "distribute-frontend",
           orgId: "org-validate-test",
           userId,
           createdBy: userId,
@@ -237,7 +209,6 @@ describe("User API Keys", () => {
       expect(res.status).toBe(200);
       expect(res.body.valid).toBe(true);
       expect(res.body.type).toBe("user");
-      expect(res.body.appId).toBe("distribute-frontend");
       expect(res.body.orgId).toBe("org-validate-test");
       expect(res.body.userId).toBe(userId);
       expect(res.body.configuredProviders).toBeDefined();
@@ -281,14 +252,13 @@ describe("User API Keys", () => {
   });
 
   describe("POST /internal/api-keys/session", () => {
-    it("should create a session key with appId, orgId, userId", async () => {
+    it("should create a session key with orgId, userId", async () => {
       const userId = randomId();
 
       const res = await request(app)
         .post("/internal/api-keys/session")
         .set("x-api-key", SERVICE_KEY)
         .send({
-          appId: "test-app",
           orgId: "org-session-test",
           userId,
         });
@@ -301,7 +271,6 @@ describe("User API Keys", () => {
     it("should return same session key on subsequent calls", async () => {
       const userId = randomId();
       const body = {
-        appId: "test-app",
         orgId: "org-session-idempotent",
         userId,
       };
@@ -327,12 +296,12 @@ describe("User API Keys", () => {
       const res1 = await request(app)
         .post("/internal/api-keys/session")
         .set("x-api-key", SERVICE_KEY)
-        .send({ appId: "test-app", orgId: "org-multi-user", userId: user1 });
+        .send({ orgId: "org-multi-user", userId: user1 });
 
       const res2 = await request(app)
         .post("/internal/api-keys/session")
         .set("x-api-key", SERVICE_KEY)
-        .send({ appId: "test-app", orgId: "org-multi-user", userId: user2 });
+        .send({ orgId: "org-multi-user", userId: user2 });
 
       expect(res1.body.key).not.toBe(res2.body.key);
     });
