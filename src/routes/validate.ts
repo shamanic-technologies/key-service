@@ -1,8 +1,8 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { orgs, orgKeys } from "../db/schema.js";
-import { apiKeyAuth, AuthenticatedRequest } from "../middleware/auth.js";
+import { apiKeys, apps, orgs, orgKeys } from "../db/schema.js";
+import { hashApiKey, isAppApiKey, hasValidPrefix } from "../lib/api-key.js";
 import { decrypt } from "../lib/crypto.js";
 import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
@@ -10,24 +10,70 @@ import { recordProviderRequirement } from "../lib/provider-registry.js";
 const router = Router();
 
 /**
- * GET /validate - Validate API key and return identity info
- * - User key (distrib.usr_* or legacy mcpf_usr_*): returns { valid, type: "user", orgId, configuredProviders }
- * - App key (distrib.app_* or legacy mcpf_app_*): returns { valid, type: "app", appId }
+ * Resolve an API key string to identity info.
+ * Returns null if the key is invalid.
  */
-router.get("/validate", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
+async function resolveApiKey(key: string) {
+  if (!hasValidPrefix(key)) return null;
+
+  const keyHash = hashApiKey(key);
+
+  if (isAppApiKey(key)) {
+    const app = await db.query.apps.findFirst({
+      where: eq(apps.keyHash, keyHash),
+    });
+    if (!app) return null;
+    return { authType: "app_key" as const, appId: app.name };
+  }
+
+  const apiKey = await db.query.apiKeys.findFirst({
+    where: eq(apiKeys.keyHash, keyHash),
+  });
+  if (!apiKey) return null;
+
+  // Update last used
+  await db
+    .update(apiKeys)
+    .set({ lastUsedAt: new Date() })
+    .where(eq(apiKeys.id, apiKey.id));
+
+  return {
+    authType: "user_key" as const,
+    appId: apiKey.appId,
+    orgId: apiKey.orgId,
+    userId: apiKey.userId,
+  };
+}
+
+/**
+ * GET /validate?key=distrib.usr_xxx - Validate API key and return identity info
+ * Auth: serviceKeyAuth (X-API-Key)
+ * - User key: returns { valid, type: "user", appId, orgId, userId, configuredProviders }
+ * - App key: returns { valid, type: "app", appId }
+ */
+router.get("/validate", async (req: Request, res: Response) => {
   try {
-    // App key: return appId
-    if (req.authType === "app_key") {
+    const key = typeof req.query.key === "string" ? req.query.key : null;
+    if (!key) {
+      return res.status(400).json({ error: "Missing required query parameter: key" });
+    }
+
+    const identity = await resolveApiKey(key);
+    if (!identity) {
+      return res.status(401).json({ error: "Invalid API key" });
+    }
+
+    if (identity.authType === "app_key") {
       return res.json({
         valid: true,
         type: "app",
-        appId: req.appId,
+        appId: identity.appId,
       });
     }
 
     // User key: return appId + orgId + userId + configured providers
     const org = await db.query.orgs.findFirst({
-      where: eq(orgs.id, req.orgId!),
+      where: eq(orgs.id, identity.orgId!),
     });
 
     if (!org) {
@@ -35,7 +81,7 @@ router.get("/validate", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
     }
 
     const keys = await db.query.orgKeys.findMany({
-      where: eq(orgKeys.orgId, req.orgId!),
+      where: eq(orgKeys.orgId, identity.orgId!),
     });
 
     const configuredProviders = keys.map((k) => k.provider);
@@ -43,9 +89,9 @@ router.get("/validate", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
     res.json({
       valid: true,
       type: "user",
-      appId: req.appId,
+      appId: identity.appId,
       orgId: org.orgId,
-      userId: req.userId,
+      userId: identity.userId,
       configuredProviders,
     });
   } catch (error) {
@@ -55,12 +101,23 @@ router.get("/validate", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
 });
 
 /**
- * GET /validate/keys/:provider - Get decrypted BYOK key (for MCP internal use)
+ * GET /validate/keys/:provider?key=distrib.usr_xxx - Get decrypted BYOK key
+ * Auth: serviceKeyAuth (X-API-Key)
  * Only works with user keys (not app keys)
  */
-router.get("/validate/keys/:provider", apiKeyAuth, async (req: AuthenticatedRequest, res) => {
+router.get("/validate/keys/:provider", async (req: Request, res: Response) => {
   try {
-    if (req.authType === "app_key") {
+    const key = typeof req.query.key === "string" ? req.query.key : null;
+    if (!key) {
+      return res.status(400).json({ error: "Missing required query parameter: key" });
+    }
+
+    const identity = await resolveApiKey(key);
+    if (!identity) {
+      return res.status(401).json({ error: "Invalid API key" });
+    }
+
+    if (identity.authType === "app_key") {
       return res.status(400).json({ error: "BYOK key lookup requires a user API key, not an app key" });
     }
 
@@ -73,14 +130,14 @@ router.get("/validate/keys/:provider", apiKeyAuth, async (req: AuthenticatedRequ
       });
     }
 
-    const key = await db.query.orgKeys.findFirst({
+    const orgKey = await db.query.orgKeys.findFirst({
       where: and(
-        eq(orgKeys.orgId, req.orgId!),
+        eq(orgKeys.orgId, identity.orgId!),
         eq(orgKeys.provider, provider)
       ),
     });
 
-    if (!key) {
+    if (!orgKey) {
       return res.status(404).json({ error: `BYOK key not found: no '${provider}' key configured for this org` });
     }
 
@@ -88,7 +145,7 @@ router.get("/validate/keys/:provider", apiKeyAuth, async (req: AuthenticatedRequ
 
     res.json({
       provider,
-      key: decrypt(key.encryptedKey),
+      key: decrypt(orgKey.encryptedKey),
     });
   } catch (error) {
     console.error("Get BYOK key error:", error);

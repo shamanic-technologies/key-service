@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import request from "supertest";
 import express from "express";
 import { serviceKeyAuth } from "../../src/middleware/auth.js";
-import { apiKeyAuth } from "../../src/middleware/auth.js";
 import internalRoutes from "../../src/routes/internal.js";
 import validateRoutes from "../../src/routes/validate.js";
 import { cleanTestData, closeDb } from "../helpers/test-db.js";
@@ -12,7 +11,7 @@ const SERVICE_KEY = "test-service-key-123";
 function createApp() {
   const app = express();
   app.use(express.json());
-  app.use(validateRoutes);
+  app.use(serviceKeyAuth, validateRoutes);
   app.use("/internal", serviceKeyAuth, internalRoutes);
   return app;
 }
@@ -55,7 +54,6 @@ describe("App Registration", () => {
         .send({ name: "duplicate-app" });
 
       expect(first.body.created).toBe(true);
-      const originalKey = first.body.apiKey;
 
       // Second registration (same name)
       const second = await request(app)
@@ -101,7 +99,8 @@ describe("App Registration", () => {
       // Validate
       const res = await request(app)
         .get("/validate")
-        .set("Authorization", `Bearer ${appKey}`);
+        .set("x-api-key", SERVICE_KEY)
+        .query({ key: appKey });
 
       expect(res.status).toBe(200);
       expect(res.body.valid).toBe(true);
@@ -113,7 +112,8 @@ describe("App Registration", () => {
     it("should reject invalid app key", async () => {
       const res = await request(app)
         .get("/validate")
-        .set("Authorization", "Bearer distrib.app_0000000000000000000000000000000000000000");
+        .set("x-api-key", SERVICE_KEY)
+        .query({ key: "distrib.app_0000000000000000000000000000000000000000" });
 
       expect(res.status).toBe(401);
     });

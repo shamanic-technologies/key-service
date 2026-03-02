@@ -50,20 +50,11 @@ export const ValidateResponseSchema = z
   })
   .openapi("ValidateResponse");
 
-registry.registerPath({
-  method: "get",
-  path: "/validate",
-  summary: "Validate API key and return org info",
-  security: [{ bearerAuth: [] }],
-  responses: {
-    200: {
-      description: "API key is valid",
-      content: { "application/json": { schema: ValidateResponseSchema } },
-    },
-    401: { description: "Unauthorized" },
-    404: { description: "Organization not found" },
-  },
-});
+const ValidateKeyQuerySchema = z
+  .object({
+    key: z.string().min(1).openapi({ description: "The API key to validate (distrib.usr_* or distrib.app_*)", example: "distrib.usr_abc123" }),
+  })
+  .openapi("ValidateKeyQuery");
 
 const ValidateKeyResponseSchema = z
   .object({
@@ -77,12 +68,13 @@ registry.registerPath({
   path: "/validate/keys/{provider}",
   summary: "Get decrypted BYOK key for a provider",
   description:
-    "Requires X-Caller-Service, X-Caller-Method, and X-Caller-Path headers to identify the calling endpoint. These are used to build the provider requirements registry.",
-  security: [{ bearerAuth: [] }],
+    "Pass the user's API key as ?key= query parameter. Requires X-Caller-Service, X-Caller-Method, and X-Caller-Path headers to identify the calling endpoint. These are used to build the provider requirements registry.",
+  security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({
       provider: z.string(),
     }),
+    query: ValidateKeyQuerySchema,
     headers: z.object({
       "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
       "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
@@ -94,7 +86,7 @@ registry.registerPath({
       description: "Decrypted key",
       content: { "application/json": { schema: ValidateKeyResponseSchema } },
     },
-    400: { description: "Missing required caller headers" },
+    400: { description: "Missing key parameter or required caller headers" },
     401: { description: "Unauthorized" },
     404: { description: "Key not configured" },
   },
@@ -757,12 +749,6 @@ registry.registerPath({
 
 // ==================== Security schemes ====================
 
-registry.registerComponent("securitySchemes", "bearerAuth", {
-  type: "http",
-  scheme: "bearer",
-  description: "API key (distrib.* or legacy mcpf_*) in Bearer token",
-});
-
 registry.registerComponent("securitySchemes", "serviceKeyAuth", {
   type: "apiKey",
   in: "header",
@@ -821,7 +807,11 @@ registry.registerPath({
   method: "get",
   path: "/validate",
   summary: "Validate API key — returns type 'app' or 'user' with corresponding identity",
-  security: [{ bearerAuth: [] }],
+  description: "Pass the API key to validate as ?key= query parameter. Authenticated via X-API-Key (service key).",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    query: ValidateKeyQuerySchema,
+  },
   responses: {
     200: {
       description: "API key is valid",
@@ -831,6 +821,7 @@ registry.registerPath({
         },
       },
     },
+    400: { description: "Missing key parameter" },
     401: { description: "Unauthorized" },
   },
 });
