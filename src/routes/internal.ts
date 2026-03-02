@@ -507,26 +507,16 @@ router.get("/app-keys/:provider/decrypt", async (req: Request, res: Response) =>
       where: and(eq(appKeys.appId, appId), eq(appKeys.provider, provider)),
     });
 
-    if (key) {
-      await recordProviderRequirement(caller, provider);
-      return res.json({ provider, key: decrypt(key.encryptedKey) });
-    }
-
-    // Fallback to platform key
-    const platformKey = await db.query.platformKeys.findFirst({
-      where: eq(platformKeys.provider, provider),
-    });
-
-    if (!platformKey) {
+    if (!key) {
       console.warn(`[KEY SERVICE] App key not found: provider=${provider} appId=${appId} caller=${caller.service}`);
-      return res.status(404).json({ error: `No '${provider}' key configured for appId '${appId}'` });
+      return res.status(404).json({ error: `App key not found: no '${provider}' key configured for app '${appId}'` });
     }
 
     await recordProviderRequirement(caller, provider);
 
     res.json({
       provider,
-      key: decrypt(platformKey.encryptedKey),
+      key: decrypt(key.encryptedKey),
     });
   } catch (error) {
     console.error("Decrypt app key error:", error);
