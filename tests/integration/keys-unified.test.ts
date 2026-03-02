@@ -190,6 +190,40 @@ describe("Unified /keys endpoints", () => {
       expect(res.body.key).toBe("sk_live_secret");
     });
 
+    it("GET /keys/:provider/decrypt — should fall back to platform key when app key missing", async () => {
+      // Register a platform key
+      await request(app)
+        .post("/keys")
+        .send({ keySource: "platform", provider: "stripe", apiKey: "sk_live_platform_shared" });
+
+      // Decrypt with keySource=app for an appId that has no app-scoped key
+      const res = await request(app)
+        .get("/keys/stripe/decrypt")
+        .set(callerHeaders)
+        .query({ keySource: "app", appId: "distribute-frontend" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.provider).toBe("stripe");
+      expect(res.body.key).toBe("sk_live_platform_shared");
+    });
+
+    it("GET /keys/:provider/decrypt — should prefer app key over platform key", async () => {
+      await request(app)
+        .post("/keys")
+        .send({ keySource: "platform", provider: "stripe", apiKey: "sk_platform" });
+      await request(app)
+        .post("/keys")
+        .send({ keySource: "app", appId: "my-app", provider: "stripe", apiKey: "sk_app_specific" });
+
+      const res = await request(app)
+        .get("/keys/stripe/decrypt")
+        .set(callerHeaders)
+        .query({ keySource: "app", appId: "my-app" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.key).toBe("sk_app_specific");
+    });
+
     it("DELETE /keys/:provider — should delete an app key", async () => {
       await request(app)
         .post("/keys")
