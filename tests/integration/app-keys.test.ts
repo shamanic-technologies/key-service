@@ -121,47 +121,14 @@ describe("App Keys endpoints", () => {
       expect(res.body.key).toBe("sk_live_secret123");
     });
 
-    it("should fall back to platform key when app key not found", async () => {
-      // Register a platform key for stripe (no appId)
-      await request(app)
-        .post("/internal/platform-keys")
-        .send({ provider: "stripe", apiKey: "sk_live_platform_shared" });
-
-      // Request decrypt for an appId that has no app-scoped stripe key
-      const res = await request(app)
-        .get("/internal/app-keys/stripe/decrypt")
-        .set(callerHeaders)
-        .query({ appId: "distribute-frontend" });
-
-      expect(res.status).toBe(200);
-      expect(res.body.provider).toBe("stripe");
-      expect(res.body.key).toBe("sk_live_platform_shared");
-    });
-
-    it("should prefer app key over platform key", async () => {
-      await request(app)
-        .post("/internal/platform-keys")
-        .send({ provider: "stripe", apiKey: "sk_live_platform" });
-      await request(app)
-        .post("/internal/app-keys")
-        .send({ appId: "myapp", provider: "stripe", apiKey: "sk_live_app_specific" });
-
-      const res = await request(app)
-        .get("/internal/app-keys/stripe/decrypt")
-        .set(callerHeaders)
-        .query({ appId: "myapp" });
-
-      expect(res.status).toBe(200);
-      expect(res.body.key).toBe("sk_live_app_specific");
-    });
-
-    it("should return 404 when neither app key nor platform key exists", async () => {
+    it("should return 404 with clear 'App key not found' message", async () => {
       const res = await request(app)
         .get("/internal/app-keys/stripe/decrypt")
         .set(callerHeaders)
         .query({ appId: "myapp" });
 
       expect(res.status).toBe(404);
+      expect(res.body.error).toContain("App key not found");
       expect(res.body.error).toContain("stripe");
       expect(res.body.error).toContain("myapp");
     });
