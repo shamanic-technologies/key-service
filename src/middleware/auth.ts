@@ -2,19 +2,14 @@ import { Request, Response, NextFunction } from "express";
 
 /**
  * Require x-org-id and x-user-id identity headers.
- * Applied to all protected routes except /validate (chicken-and-egg: validate discovers identity from key).
- * System-level routes (platform-keys, provider-requirements) are exempted — they run during
- * cold-start bootstrap with no org/user context.
+ * Sets req.identity = { orgId, userId } for downstream handlers.
+ * Only applied to route groups that need org/user context (not platform-keys, provider-requirements).
  */
 export function requireIdentityHeaders(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
-  if (req.path.startsWith("/platform-keys") || req.path.startsWith("/provider-requirements")) {
-    return next();
-  }
-
   const orgId = req.headers["x-org-id"];
   const userId = req.headers["x-user-id"];
 
@@ -24,6 +19,8 @@ export function requireIdentityHeaders(
   if (typeof userId !== "string" || !userId.trim()) {
     return res.status(400).json({ error: "Missing required header: x-user-id" });
   }
+
+  req.identity = { orgId: orgId.trim(), userId: userId.trim() };
 
   next();
 }

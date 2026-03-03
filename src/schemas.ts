@@ -118,19 +118,10 @@ registry.registerPath({
   },
 });
 
-// ==================== Internal: Shared ====================
-
-const OrgIdQuerySchema = z
-  .object({
-    orgId: z.string().min(1),
-  })
-  .openapi("OrgIdQuery");
-
-// ==================== Internal: User Auth Keys ====================
+// ==================== User Auth Keys (/api-keys) ====================
 
 const ListUserAuthKeysQuerySchema = z
   .object({
-    orgId: z.string().min(1),
     userId: z.string().optional(),
   })
   .openapi("ListUserAuthKeysQuery");
@@ -156,7 +147,7 @@ const ListUserAuthKeysResponseSchema = z
 
 registry.registerPath({
   method: "get",
-  path: "/internal/api-keys",
+  path: "/api-keys",
   summary: "List user auth keys for an org",
   security: [{ serviceKeyAuth: [] }],
   request: {
@@ -168,13 +159,11 @@ registry.registerPath({
       description: "List of user auth keys",
       content: { "application/json": { schema: ListUserAuthKeysResponseSchema } },
     },
-    400: { description: "Missing orgId" },
   },
 });
 
 export const CreateUserAuthKeyRequestSchema = z
   .object({
-    orgId: z.string().min(1),
     userId: z.string().min(1),
     createdBy: z.string().min(1),
     name: z.string().min(1),
@@ -195,7 +184,7 @@ const CreateUserAuthKeyResponseSchema = z
 
 registry.registerPath({
   method: "post",
-  path: "/internal/api-keys",
+  path: "/api-keys",
   summary: "Create a new user auth key",
   security: [{ serviceKeyAuth: [] }],
   request: {
@@ -213,12 +202,6 @@ registry.registerPath({
   },
 });
 
-export const DeleteUserAuthKeyRequestSchema = z
-  .object({
-    orgId: z.string().min(1),
-  })
-  .openapi("DeleteUserAuthKeyRequest");
-
 const MessageResponseSchema = z
   .object({
     message: z.string(),
@@ -227,32 +210,21 @@ const MessageResponseSchema = z
 
 registry.registerPath({
   method: "delete",
-  path: "/internal/api-keys/{id}",
+  path: "/api-keys/{id}",
   summary: "Delete a user auth key",
   security: [{ serviceKeyAuth: [] }],
   request: {
     headers: IdentityHeadersSchema,
     params: z.object({ id: z.string().uuid() }),
-    body: {
-      content: { "application/json": { schema: DeleteUserAuthKeyRequestSchema } },
-    },
   },
   responses: {
     200: {
       description: "User auth key deleted",
       content: { "application/json": { schema: MessageResponseSchema } },
     },
-    400: { description: "Missing orgId" },
     404: { description: "Key not found" },
   },
 });
-
-export const SessionKeyRequestSchema = z
-  .object({
-    orgId: z.string().min(1),
-    userId: z.string().min(1),
-  })
-  .openapi("SessionKeyRequest");
 
 const SessionKeyResponseSchema = z
   .object({
@@ -265,27 +237,22 @@ const SessionKeyResponseSchema = z
 
 registry.registerPath({
   method: "post",
-  path: "/internal/api-keys/session",
+  path: "/api-keys/session",
   summary: "Get or create a default user auth key for the org+user",
+  description: "Uses orgId and userId from identity headers (x-org-id, x-user-id). No request body needed.",
   security: [{ serviceKeyAuth: [] }],
   request: {
     headers: IdentityHeadersSchema,
-    body: {
-      content: {
-        "application/json": { schema: SessionKeyRequestSchema },
-      },
-    },
   },
   responses: {
     200: {
       description: "Session key",
       content: { "application/json": { schema: SessionKeyResponseSchema } },
     },
-    400: { description: "Missing orgId or userId" },
   },
 });
 
-// ==================== Internal: Org Keys ====================
+// ==================== Org Keys (/keys) ====================
 
 const OrgKeyItemSchema = z
   .object({
@@ -304,25 +271,23 @@ const ListOrgKeysResponseSchema = z
 
 registry.registerPath({
   method: "get",
-  path: "/internal/keys",
+  path: "/keys",
   summary: "List org keys for an org",
+  description: "Uses orgId from identity header (x-org-id).",
   security: [{ serviceKeyAuth: [] }],
   request: {
     headers: IdentityHeadersSchema,
-    query: OrgIdQuerySchema,
   },
   responses: {
     200: {
       description: "List of org keys",
       content: { "application/json": { schema: ListOrgKeysResponseSchema } },
     },
-    400: { description: "Missing orgId" },
   },
 });
 
 export const CreateOrgKeyRequestSchema = z
   .object({
-    orgId: z.string().min(1),
     provider: z.string().min(1),
     apiKey: z.string().min(1),
   })
@@ -338,8 +303,9 @@ const CreateOrgKeyResponseSchema = z
 
 registry.registerPath({
   method: "post",
-  path: "/internal/keys",
+  path: "/keys",
   summary: "Add or update an org key",
+  description: "Uses orgId from identity header (x-org-id).",
   security: [{ serviceKeyAuth: [] }],
   request: {
     headers: IdentityHeadersSchema,
@@ -360,12 +326,6 @@ registry.registerPath({
   },
 });
 
-export const DeleteOrgKeyQuerySchema = z
-  .object({
-    orgId: z.string().min(1),
-  })
-  .openapi("DeleteOrgKeyQuery");
-
 const DeleteOrgKeyResponseSchema = z
   .object({
     provider: z.string(),
@@ -375,15 +335,15 @@ const DeleteOrgKeyResponseSchema = z
 
 registry.registerPath({
   method: "delete",
-  path: "/internal/keys/{provider}",
+  path: "/keys/{provider}",
   summary: "Delete an org key",
+  description: "Uses orgId from identity header (x-org-id).",
   security: [{ serviceKeyAuth: [] }],
   request: {
     headers: IdentityHeadersSchema,
     params: z.object({
       provider: z.string(),
     }),
-    query: DeleteOrgKeyQuerySchema,
   },
   responses: {
     200: {
@@ -392,11 +352,10 @@ registry.registerPath({
         "application/json": { schema: DeleteOrgKeyResponseSchema },
       },
     },
-    400: { description: "Invalid request" },
   },
 });
 
-// ==================== Internal: Platform Keys ====================
+// ==================== Platform Keys (/platform-keys) ====================
 
 export const CreatePlatformKeyRequestSchema = z
   .object({
@@ -415,13 +374,12 @@ const CreatePlatformKeyResponseSchema = z
 
 registry.registerPath({
   method: "post",
-  path: "/internal/platform-keys",
+  path: "/platform-keys",
   summary: "Add or update a platform key",
   description:
-    "Upsert a platform-level API key. Platform keys are global — not tied to any org. Typically registered once at deployment.",
+    "Upsert a platform-level API key. Platform keys are global — not tied to any org. Typically registered once at deployment. No identity headers needed.",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    headers: IdentityHeadersSchema,
     body: {
       content: {
         "application/json": { schema: CreatePlatformKeyRequestSchema },
@@ -456,12 +414,10 @@ const ListPlatformKeysResponseSchema = z
 
 registry.registerPath({
   method: "get",
-  path: "/internal/platform-keys",
+  path: "/platform-keys",
   summary: "List all platform keys",
+  description: "No identity headers needed.",
   security: [{ serviceKeyAuth: [] }],
-  request: {
-    headers: IdentityHeadersSchema,
-  },
   responses: {
     200: {
       description: "List of platform keys",
@@ -469,12 +425,6 @@ registry.registerPath({
     },
   },
 });
-
-export const DeletePlatformKeyQuerySchema = z
-  .object({
-    provider: z.string().min(1),
-  })
-  .openapi("DeletePlatformKeyQuery");
 
 const DeletePlatformKeyResponseSchema = z
   .object({
@@ -485,11 +435,11 @@ const DeletePlatformKeyResponseSchema = z
 
 registry.registerPath({
   method: "delete",
-  path: "/internal/platform-keys/{provider}",
+  path: "/platform-keys/{provider}",
   summary: "Delete a platform key",
+  description: "No identity headers needed.",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    headers: IdentityHeadersSchema,
     params: z.object({
       provider: z.string(),
     }),
@@ -504,7 +454,7 @@ registry.registerPath({
   },
 });
 
-// ==================== Provider Requirements ====================
+// ==================== Provider Requirements (/provider-requirements) ====================
 
 const EndpointSchema = z
   .object({
@@ -538,13 +488,12 @@ const ProviderRequirementsResponseSchema = z
 
 registry.registerPath({
   method: "post",
-  path: "/internal/provider-requirements",
+  path: "/provider-requirements",
   summary: "Query which providers are needed for a set of endpoints",
   description:
-    "Given a list of service endpoints (service + method + path), returns which third-party providers each endpoint has been observed requesting. Used by workflow-service to determine which keys are needed before execution.",
+    "Given a list of service endpoints (service + method + path), returns which third-party providers each endpoint has been observed requesting. Used by workflow-service to determine which keys are needed before execution. No identity headers needed.",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    headers: IdentityHeadersSchema,
     body: {
       content: {
         "application/json": { schema: ProviderRequirementsRequestSchema },
@@ -607,13 +556,6 @@ registry.registerPath({
 });
 
 // Decrypt — auto-resolves key source via org_provider_key_sources preference
-export const DecryptKeyQuerySchema = z
-  .object({
-    orgId: z.string().min(1),
-    userId: z.string().min(1),
-  })
-  .openapi("DecryptKeyQuery");
-
 const DecryptKeyResponseSchema = z
   .object({
     provider: z.string(),
@@ -628,11 +570,10 @@ registry.registerPath({
   path: "/keys/{provider}/decrypt",
   summary: "Get decrypted key (auto-resolves source)",
   description:
-    "Returns the decrypted key for a provider. Automatically resolves whether to use org or platform key based on the org's preference (default: platform). Response includes keySource indicating which was used. Requires X-Caller-* headers for provider requirements tracking. Always pass both orgId and userId — userId is required for logging.",
+    "Returns the decrypted key for a provider. Automatically resolves whether to use org or platform key based on the org's preference (default: platform). Response includes keySource indicating which was used. Requires X-Caller-* headers for provider requirements tracking. Uses orgId and userId from identity headers.",
   security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({ provider: z.string() }),
-    query: DecryptKeyQuerySchema,
     headers: IdentityHeadersSchema.extend({
       "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
       "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
@@ -644,7 +585,7 @@ registry.registerPath({
       description: "Decrypted key",
       content: { "application/json": { schema: DecryptKeyResponseSchema } },
     },
-    400: { description: "Missing required parameters or caller headers" },
+    400: { description: "Missing required caller headers" },
     404: { description: "Key not configured" },
   },
 });
@@ -653,7 +594,6 @@ registry.registerPath({
 
 export const SetKeySourceRequestSchema = z
   .object({
-    orgId: z.string().min(1),
     keySource: z.enum(["org", "platform"]),
   })
   .openapi("SetKeySourceRequest");
@@ -672,7 +612,7 @@ registry.registerPath({
   path: "/keys/{provider}/source",
   summary: "Set key source preference for an org+provider",
   description:
-    "Set whether an org uses its own key ('org') or the platform key ('platform') for a given provider. If switching to 'org', an org key must already be stored — otherwise returns 400.",
+    "Set whether an org uses its own key ('org') or the platform key ('platform') for a given provider. If switching to 'org', an org key must already be stored — otherwise returns 400. Uses orgId from identity header.",
   security: [{ serviceKeyAuth: [] }],
   request: {
     headers: IdentityHeadersSchema,
@@ -690,12 +630,6 @@ registry.registerPath({
   },
 });
 
-const GetKeySourceQuerySchema = z
-  .object({
-    orgId: z.string().min(1),
-  })
-  .openapi("GetKeySourceQuery");
-
 const GetKeySourceResponseSchema = z
   .object({
     provider: z.string(),
@@ -710,29 +644,21 @@ registry.registerPath({
   path: "/keys/{provider}/source",
   summary: "Get key source preference for an org+provider",
   description:
-    "Returns the current key source preference for an org+provider. If no explicit preference is set, returns 'platform' with isDefault=true.",
+    "Returns the current key source preference for an org+provider. If no explicit preference is set, returns 'platform' with isDefault=true. Uses orgId from identity header.",
   security: [{ serviceKeyAuth: [] }],
   request: {
     headers: IdentityHeadersSchema,
     params: z.object({ provider: z.string() }),
-    query: GetKeySourceQuerySchema,
   },
   responses: {
     200: {
       description: "Key source preference",
       content: { "application/json": { schema: GetKeySourceResponseSchema } },
     },
-    400: { description: "Missing orgId" },
   },
 });
 
 // List all key source preferences for an org
-const ListKeySourcesQuerySchema = z
-  .object({
-    orgId: z.string().min(1),
-  })
-  .openapi("ListKeySourcesQuery");
-
 const KeySourceItemSchema = z
   .object({
     provider: z.string(),
@@ -751,17 +677,15 @@ registry.registerPath({
   path: "/keys/sources",
   summary: "List all key source preferences for an org",
   description:
-    "Returns all explicit key source preferences for an org. Providers not listed default to 'platform'.",
+    "Returns all explicit key source preferences for an org. Providers not listed default to 'platform'. Uses orgId from identity header.",
   security: [{ serviceKeyAuth: [] }],
   request: {
     headers: IdentityHeadersSchema,
-    query: ListKeySourcesQuerySchema,
   },
   responses: {
     200: {
       description: "Key source preferences",
       content: { "application/json": { schema: ListKeySourcesResponseSchema } },
     },
-    400: { description: "Missing orgId" },
   },
 });

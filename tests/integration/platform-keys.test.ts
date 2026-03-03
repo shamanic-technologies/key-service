@@ -1,18 +1,13 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import request from "supertest";
 import express from "express";
-import internalRoutes from "../../src/routes/internal.js";
-import { requireIdentityHeaders } from "../../src/middleware/auth.js";
+import platformKeysRoutes from "../../src/routes/platform-keys.js";
 import { cleanTestData, closeDb } from "../helpers/test-db.js";
 
 const app = express();
 app.use(express.json());
-app.use("/internal", requireIdentityHeaders, internalRoutes);
-
-const identityHeaders = {
-  "x-org-id": "test-org-id",
-  "x-user-id": "test-user-id",
-};
+// No identity headers middleware — platform keys don't need org/user context
+app.use("/platform-keys", platformKeysRoutes);
 
 describe("Platform Keys endpoints", () => {
   beforeEach(async () => {
@@ -24,11 +19,10 @@ describe("Platform Keys endpoints", () => {
     await closeDb();
   });
 
-  describe("POST /internal/platform-keys", () => {
+  describe("POST /platform-keys", () => {
     it("should create a new platform key", async () => {
       const res = await request(app)
-        .post("/internal/platform-keys")
-        .set(identityHeaders)
+        .post("/platform-keys")
         .send({ provider: "anthropic", apiKey: "sk-ant-abc123" });
 
       expect(res.status).toBe(200);
@@ -39,7 +33,7 @@ describe("Platform Keys endpoints", () => {
 
     it("should work without identity headers (cold-start bootstrap)", async () => {
       const res = await request(app)
-        .post("/internal/platform-keys")
+        .post("/platform-keys")
         .send({ provider: "anthropic", apiKey: "sk-ant-bootstrap" });
 
       expect(res.status).toBe(200);
@@ -49,49 +43,42 @@ describe("Platform Keys endpoints", () => {
 
     it("should upsert (update existing key)", async () => {
       await request(app)
-        .post("/internal/platform-keys")
-        .set(identityHeaders)
+        .post("/platform-keys")
         .send({ provider: "anthropic", apiKey: "sk-ant-old" });
 
       const res = await request(app)
-        .post("/internal/platform-keys")
-        .set(identityHeaders)
+        .post("/platform-keys")
         .send({ provider: "anthropic", apiKey: "sk-ant-new" });
 
       expect(res.status).toBe(200);
       expect(res.body.provider).toBe("anthropic");
 
       const listRes = await request(app)
-        .get("/internal/platform-keys")
-        .set(identityHeaders);
+        .get("/platform-keys");
 
       expect(listRes.body.keys).toHaveLength(1);
     });
 
     it("should reject missing fields", async () => {
       const res = await request(app)
-        .post("/internal/platform-keys")
-        .set(identityHeaders)
+        .post("/platform-keys")
         .send({ provider: "anthropic" });
 
       expect(res.status).toBe(400);
     });
   });
 
-  describe("GET /internal/platform-keys", () => {
+  describe("GET /platform-keys", () => {
     it("should list platform keys (masked)", async () => {
       await request(app)
-        .post("/internal/platform-keys")
-        .set(identityHeaders)
+        .post("/platform-keys")
         .send({ provider: "anthropic", apiKey: "sk-ant-abc123xyz" });
       await request(app)
-        .post("/internal/platform-keys")
-        .set(identityHeaders)
+        .post("/platform-keys")
         .send({ provider: "openai", apiKey: "sk-proj-abc123xyz" });
 
       const res = await request(app)
-        .get("/internal/platform-keys")
-        .set(identityHeaders);
+        .get("/platform-keys");
 
       expect(res.status).toBe(200);
       expect(res.body.keys).toHaveLength(2);
@@ -104,39 +91,34 @@ describe("Platform Keys endpoints", () => {
 
     it("should return empty array when no keys exist", async () => {
       const res = await request(app)
-        .get("/internal/platform-keys")
-        .set(identityHeaders);
+        .get("/platform-keys");
 
       expect(res.status).toBe(200);
       expect(res.body.keys).toHaveLength(0);
     });
   });
 
-  describe("DELETE /internal/platform-keys/:provider", () => {
+  describe("DELETE /platform-keys/:provider", () => {
     it("should delete a platform key", async () => {
       await request(app)
-        .post("/internal/platform-keys")
-        .set(identityHeaders)
+        .post("/platform-keys")
         .send({ provider: "anthropic", apiKey: "sk-ant-abc" });
 
       const res = await request(app)
-        .delete("/internal/platform-keys/anthropic")
-        .set(identityHeaders);
+        .delete("/platform-keys/anthropic");
 
       expect(res.status).toBe(200);
       expect(res.body.provider).toBe("anthropic");
 
       const listRes = await request(app)
-        .get("/internal/platform-keys")
-        .set(identityHeaders);
+        .get("/platform-keys");
 
       expect(listRes.body.keys).toHaveLength(0);
     });
 
     it("should succeed even if key doesn't exist (idempotent)", async () => {
       const res = await request(app)
-        .delete("/internal/platform-keys/anthropic")
-        .set(identityHeaders);
+        .delete("/platform-keys/anthropic");
 
       expect(res.status).toBe(200);
     });

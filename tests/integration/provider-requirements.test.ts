@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import request from "supertest";
 import express from "express";
 import { eq, and } from "drizzle-orm";
-import internalRoutes from "../../src/routes/internal.js";
 import keysRoutes from "../../src/routes/keys.js";
+import platformKeysRoutes from "../../src/routes/platform-keys.js";
+import providerRequirementsRoutes from "../../src/routes/provider-requirements.js";
 import { requireIdentityHeaders } from "../../src/middleware/auth.js";
 import { db } from "../../src/db/index.js";
 import { providerRequirements } from "../../src/db/schema.js";
@@ -16,7 +17,8 @@ import {
 const app = express();
 app.use(express.json());
 app.use("/keys", requireIdentityHeaders, keysRoutes);
-app.use("/internal", requireIdentityHeaders, internalRoutes);
+app.use("/platform-keys", platformKeysRoutes);
+app.use("/provider-requirements", providerRequirementsRoutes);
 
 const identityHeaders = {
   "x-org-id": "test-org-id",
@@ -45,8 +47,7 @@ describe("Provider Requirements", () => {
     it("should return 400 without caller headers on auto-resolve decrypt", async () => {
       const res = await request(app)
         .get("/keys/apollo/decrypt")
-        .set(identityHeaders)
-        .query({ orgId: "org_test", userId: "user_test" });
+        .set(identityHeaders);
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain("X-Caller-Service");
@@ -55,8 +56,7 @@ describe("Provider Requirements", () => {
     it("should return 400 with partial caller headers", async () => {
       const res = await request(app)
         .get("/keys/apollo/decrypt")
-        .set({ ...identityHeaders, "x-caller-service": "apollo" })
-        .query({ orgId: "org_test", userId: "user_test" });
+        .set({ ...identityHeaders, "x-caller-service": "apollo" });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain("X-Caller-Service");
@@ -79,15 +79,15 @@ describe("Provider Requirements", () => {
   describe("Provider requirement recording", () => {
     it("should record a provider requirement on org key decrypt", async () => {
       await request(app)
-        .post("/internal/keys")
+        .post("/keys")
         .set(identityHeaders)
-        .send({ orgId: "org-1", provider: "stripe", apiKey: "sk_live_test" });
+        .send({ provider: "stripe", apiKey: "sk_live_test" });
 
       // Set preference to "org" so auto-resolve uses the org key
       await request(app)
         .put("/keys/stripe/source")
         .set(identityHeaders)
-        .send({ orgId: "org-1", keySource: "org" });
+        .send({ keySource: "org" });
 
       const res = await request(app)
         .get("/keys/stripe/decrypt")
@@ -96,8 +96,7 @@ describe("Provider Requirements", () => {
           "x-caller-service": "payment-service",
           "x-caller-method": "POST",
           "x-caller-path": "/payments/charge",
-        })
-        .query({ orgId: "org-1", userId: "user-1" });
+        });
 
       expect(res.status).toBe(200);
 
@@ -115,8 +114,7 @@ describe("Provider Requirements", () => {
 
     it("should record a provider requirement on platform key decrypt", async () => {
       await request(app)
-        .post("/internal/platform-keys")
-        .set(identityHeaders)
+        .post("/platform-keys")
         .send({ provider: "anthropic", apiKey: "sk-ant-test" });
 
       const res = await request(app)
@@ -144,8 +142,7 @@ describe("Provider Requirements", () => {
 
     it("should update lastSeenAt on repeat calls (upsert)", async () => {
       await request(app)
-        .post("/internal/platform-keys")
-        .set(identityHeaders)
+        .post("/platform-keys")
         .send({ provider: "stripe", apiKey: "sk_live_test" });
 
       await request(app)
@@ -169,12 +166,10 @@ describe("Provider Requirements", () => {
 
     it("should record multiple providers for the same endpoint", async () => {
       await request(app)
-        .post("/internal/platform-keys")
-        .set(identityHeaders)
+        .post("/platform-keys")
         .send({ provider: "openai", apiKey: "sk-test1" });
       await request(app)
-        .post("/internal/platform-keys")
-        .set(identityHeaders)
+        .post("/platform-keys")
         .send({ provider: "anthropic", apiKey: "sk-ant-test1" });
 
       await request(app)
@@ -206,9 +201,9 @@ describe("Provider Requirements", () => {
     });
   });
 
-  // ==================== POST /internal/provider-requirements ====================
+  // ==================== POST /provider-requirements ====================
 
-  describe("POST /internal/provider-requirements", () => {
+  describe("POST /provider-requirements", () => {
     it("should return matching requirements for known endpoints", async () => {
       await insertTestProviderRequirement({
         service: "apollo",
@@ -224,8 +219,7 @@ describe("Provider Requirements", () => {
       });
 
       const res = await request(app)
-        .post("/internal/provider-requirements")
-        .set(identityHeaders)
+        .post("/provider-requirements")
         .send({
           endpoints: [
             { service: "apollo", method: "POST", path: "/leads/search" },
@@ -240,8 +234,7 @@ describe("Provider Requirements", () => {
 
     it("should return empty for unknown endpoints", async () => {
       const res = await request(app)
-        .post("/internal/provider-requirements")
-        .set(identityHeaders)
+        .post("/provider-requirements")
         .send({
           endpoints: [
             { service: "unknown", method: "GET", path: "/nothing" },
@@ -268,8 +261,7 @@ describe("Provider Requirements", () => {
       });
 
       const res = await request(app)
-        .post("/internal/provider-requirements")
-        .set(identityHeaders)
+        .post("/provider-requirements")
         .send({
           endpoints: [
             { service: "apollo", method: "POST", path: "/leads/search" },
@@ -291,8 +283,7 @@ describe("Provider Requirements", () => {
       });
 
       const res = await request(app)
-        .post("/internal/provider-requirements")
-        .set(identityHeaders)
+        .post("/provider-requirements")
         .send({
           endpoints: [
             { service: "Apollo", method: "post", path: "/leads/search" },
@@ -306,8 +297,7 @@ describe("Provider Requirements", () => {
 
     it("should return 400 for invalid request body", async () => {
       const res = await request(app)
-        .post("/internal/provider-requirements")
-        .set(identityHeaders)
+        .post("/provider-requirements")
         .send({});
 
       expect(res.status).toBe(400);
@@ -315,8 +305,7 @@ describe("Provider Requirements", () => {
 
     it("should return 400 for empty endpoints array", async () => {
       const res = await request(app)
-        .post("/internal/provider-requirements")
-        .set(identityHeaders)
+        .post("/provider-requirements")
         .send({ endpoints: [] });
 
       expect(res.status).toBe(400);
@@ -337,8 +326,7 @@ describe("Provider Requirements", () => {
       });
 
       const res = await request(app)
-        .post("/internal/provider-requirements")
-        .set(identityHeaders)
+        .post("/provider-requirements")
         .send({
           endpoints: [
             { service: "apollo", method: "POST", path: "/leads/search" },
