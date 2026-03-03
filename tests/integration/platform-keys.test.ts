@@ -37,6 +37,16 @@ describe("Platform Keys endpoints", () => {
       expect(res.body.message).toContain("anthropic");
     });
 
+    it("should work without identity headers (cold-start bootstrap)", async () => {
+      const res = await request(app)
+        .post("/internal/platform-keys")
+        .send({ provider: "anthropic", apiKey: "sk-ant-bootstrap" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.provider).toBe("anthropic");
+      expect(res.body.maskedKey).toBeDefined();
+    });
+
     it("should upsert (update existing key)", async () => {
       await request(app)
         .post("/internal/platform-keys")
