@@ -3,12 +3,18 @@ import { Request, Response, NextFunction } from "express";
 /**
  * Require x-org-id and x-user-id identity headers.
  * Applied to all protected routes except /validate (chicken-and-egg: validate discovers identity from key).
+ * System-level routes (platform-keys, provider-requirements) are exempted — they run during
+ * cold-start bootstrap with no org/user context.
  */
 export function requireIdentityHeaders(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
+  if (req.path.startsWith("/platform-keys") || req.path.startsWith("/provider-requirements")) {
+    return next();
+  }
+
   const orgId = req.headers["x-org-id"];
   const userId = req.headers["x-user-id"];
 
