@@ -8,9 +8,11 @@ import { dirname, join } from "path";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { db } from "./db/index.js";
 import healthRoutes from "./routes/health.js";
-import internalRoutes from "./routes/internal.js";
-import keysRoutes from "./routes/keys.js";
 import validateRoutes from "./routes/validate.js";
+import keysRoutes from "./routes/keys.js";
+import apiKeysRoutes from "./routes/api-keys.js";
+import platformKeysRoutes from "./routes/platform-keys.js";
+import providerRequirementsRoutes from "./routes/provider-requirements.js";
 import { serviceKeyAuth, requireIdentityHeaders } from "./middleware/auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -38,11 +40,17 @@ app.use(healthRoutes);
 // API key validation (service-to-service, authenticated via X-API-Key)
 app.use(serviceKeyAuth, validateRoutes);
 
-// Key management endpoints (resolve, preferences)
+// Key management endpoints (resolve, preferences, org key CRUD)
 app.use("/keys", serviceKeyAuth, requireIdentityHeaders, keysRoutes);
 
-// Internal routes (CRUD for keys, user auth keys, provider requirements)
-app.use("/internal", serviceKeyAuth, requireIdentityHeaders, internalRoutes);
+// User auth key CRUD
+app.use("/api-keys", serviceKeyAuth, requireIdentityHeaders, apiKeysRoutes);
+
+// Platform keys — no identity headers needed (cold-start bootstrap)
+app.use("/platform-keys", serviceKeyAuth, platformKeysRoutes);
+
+// Provider requirements — no identity headers needed
+app.use("/provider-requirements", serviceKeyAuth, providerRequirementsRoutes);
 
 // 404
 app.use((req, res) => {

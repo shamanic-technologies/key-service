@@ -190,10 +190,6 @@
       "CreateUserAuthKeyRequest": {
         "type": "object",
         "properties": {
-          "orgId": {
-            "type": "string",
-            "minLength": 1
-          },
           "userId": {
             "type": "string",
             "minLength": 1
@@ -208,7 +204,6 @@
           }
         },
         "required": [
-          "orgId",
           "userId",
           "createdBy",
           "name"
@@ -223,18 +218,6 @@
         },
         "required": [
           "message"
-        ]
-      },
-      "DeleteUserAuthKeyRequest": {
-        "type": "object",
-        "properties": {
-          "orgId": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "orgId"
         ]
       },
       "SessionKeyResponse": {
@@ -260,23 +243,6 @@
           "key",
           "keyPrefix",
           "name"
-        ]
-      },
-      "SessionKeyRequest": {
-        "type": "object",
-        "properties": {
-          "orgId": {
-            "type": "string",
-            "minLength": 1
-          },
-          "userId": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "orgId",
-          "userId"
         ]
       },
       "ListOrgKeysResponse": {
@@ -342,10 +308,6 @@
       "CreateOrgKeyRequest": {
         "type": "object",
         "properties": {
-          "orgId": {
-            "type": "string",
-            "minLength": 1
-          },
           "provider": {
             "type": "string",
             "minLength": 1
@@ -356,7 +318,6 @@
           }
         },
         "required": [
-          "orgId",
           "provider",
           "apiKey"
         ]
@@ -621,10 +582,6 @@
       "SetKeySourceRequest": {
         "type": "object",
         "properties": {
-          "orgId": {
-            "type": "string",
-            "minLength": 1
-          },
           "keySource": {
             "type": "string",
             "enum": [
@@ -634,7 +591,6 @@
           }
         },
         "required": [
-          "orgId",
           "keySource"
         ]
       },
@@ -852,7 +808,7 @@
         }
       }
     },
-    "/internal/api-keys": {
+    "/api-keys": {
       "get": {
         "summary": "List user auth keys for an org",
         "security": [
@@ -861,15 +817,6 @@
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "required": true,
-            "name": "orgId",
-            "in": "query"
-          },
           {
             "schema": {
               "type": "string"
@@ -913,9 +860,6 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Missing orgId"
           }
         }
       },
@@ -978,7 +922,7 @@
         }
       }
     },
-    "/internal/api-keys/{id}": {
+    "/api-keys/{id}": {
       "delete": {
         "summary": "Delete a user auth key",
         "security": [
@@ -1021,15 +965,6 @@
             "in": "header"
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeleteUserAuthKeyRequest"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "User auth key deleted",
@@ -1041,18 +976,16 @@
               }
             }
           },
-          "400": {
-            "description": "Missing orgId"
-          },
           "404": {
             "description": "Key not found"
           }
         }
       }
     },
-    "/internal/api-keys/session": {
+    "/api-keys/session": {
       "post": {
         "summary": "Get or create a default user auth key for the org+user",
+        "description": "Uses orgId and userId from identity headers (x-org-id, x-user-id). No request body needed.",
         "security": [
           {
             "serviceKeyAuth": []
@@ -1084,15 +1017,6 @@
             "in": "header"
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SessionKeyRequest"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Session key",
@@ -1103,31 +1027,20 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Missing orgId or userId"
           }
         }
       }
     },
-    "/internal/keys": {
+    "/keys": {
       "get": {
         "summary": "List org keys for an org",
+        "description": "Uses orgId from identity header (x-org-id).",
         "security": [
           {
             "serviceKeyAuth": []
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "required": true,
-            "name": "orgId",
-            "in": "query"
-          },
           {
             "schema": {
               "type": "string",
@@ -1163,14 +1076,12 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Missing orgId"
           }
         }
       },
       "post": {
         "summary": "Add or update an org key",
+        "description": "Uses orgId from identity header (x-org-id).",
         "security": [
           {
             "serviceKeyAuth": []
@@ -1228,9 +1139,10 @@
         }
       }
     },
-    "/internal/keys/{provider}": {
+    "/keys/{provider}": {
       "delete": {
         "summary": "Delete an org key",
+        "description": "Uses orgId from identity header (x-org-id).",
         "security": [
           {
             "serviceKeyAuth": []
@@ -1244,15 +1156,6 @@
             "required": true,
             "name": "provider",
             "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "required": true,
-            "name": "orgId",
-            "in": "query"
           },
           {
             "schema": {
@@ -1289,46 +1192,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Invalid request"
           }
         }
       }
     },
-    "/internal/platform-keys": {
+    "/platform-keys": {
       "post": {
         "summary": "Add or update a platform key",
-        "description": "Upsert a platform-level API key. Platform keys are global — not tied to any org. Typically registered once at deployment.",
+        "description": "Upsert a platform-level API key. Platform keys are global — not tied to any org. Typically registered once at deployment. No identity headers needed.",
         "security": [
           {
             "serviceKeyAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Internal org UUID from client-service",
-              "example": "org-uuid-123"
-            },
-            "required": true,
-            "description": "Internal org UUID from client-service",
-            "name": "x-org-id",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Internal user UUID from client-service",
-              "example": "user-uuid-456"
-            },
-            "required": true,
-            "description": "Internal user UUID from client-service",
-            "name": "x-user-id",
-            "in": "header"
           }
         ],
         "requestBody": {
@@ -1358,35 +1232,10 @@
       },
       "get": {
         "summary": "List all platform keys",
+        "description": "No identity headers needed.",
         "security": [
           {
             "serviceKeyAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Internal org UUID from client-service",
-              "example": "org-uuid-123"
-            },
-            "required": true,
-            "description": "Internal org UUID from client-service",
-            "name": "x-org-id",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Internal user UUID from client-service",
-              "example": "user-uuid-456"
-            },
-            "required": true,
-            "description": "Internal user UUID from client-service",
-            "name": "x-user-id",
-            "in": "header"
           }
         ],
         "responses": {
@@ -1403,9 +1252,10 @@
         }
       }
     },
-    "/internal/platform-keys/{provider}": {
+    "/platform-keys/{provider}": {
       "delete": {
         "summary": "Delete a platform key",
+        "description": "No identity headers needed.",
         "security": [
           {
             "serviceKeyAuth": []
@@ -1419,30 +1269,6 @@
             "required": true,
             "name": "provider",
             "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Internal org UUID from client-service",
-              "example": "org-uuid-123"
-            },
-            "required": true,
-            "description": "Internal org UUID from client-service",
-            "name": "x-org-id",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Internal user UUID from client-service",
-              "example": "user-uuid-456"
-            },
-            "required": true,
-            "description": "Internal user UUID from client-service",
-            "name": "x-user-id",
-            "in": "header"
           }
         ],
         "responses": {
@@ -1459,39 +1285,13 @@
         }
       }
     },
-    "/internal/provider-requirements": {
+    "/provider-requirements": {
       "post": {
         "summary": "Query which providers are needed for a set of endpoints",
-        "description": "Given a list of service endpoints (service + method + path), returns which third-party providers each endpoint has been observed requesting. Used by workflow-service to determine which keys are needed before execution.",
+        "description": "Given a list of service endpoints (service + method + path), returns which third-party providers each endpoint has been observed requesting. Used by workflow-service to determine which keys are needed before execution. No identity headers needed.",
         "security": [
           {
             "serviceKeyAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Internal org UUID from client-service",
-              "example": "org-uuid-123"
-            },
-            "required": true,
-            "description": "Internal org UUID from client-service",
-            "name": "x-org-id",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Internal user UUID from client-service",
-              "example": "user-uuid-456"
-            },
-            "required": true,
-            "description": "Internal user UUID from client-service",
-            "name": "x-user-id",
-            "in": "header"
           }
         ],
         "requestBody": {
@@ -1622,7 +1422,7 @@
     "/keys/{provider}/decrypt": {
       "get": {
         "summary": "Get decrypted key (auto-resolves source)",
-        "description": "Returns the decrypted key for a provider. Automatically resolves whether to use org or platform key based on the org's preference (default: platform). Response includes keySource indicating which was used. Requires X-Caller-* headers for provider requirements tracking. Always pass both orgId and userId — userId is required for logging.",
+        "description": "Returns the decrypted key for a provider. Automatically resolves whether to use org or platform key based on the org's preference (default: platform). Response includes keySource indicating which was used. Requires X-Caller-* headers for provider requirements tracking. Uses orgId and userId from identity headers.",
         "security": [
           {
             "serviceKeyAuth": []
@@ -1636,24 +1436,6 @@
             "required": true,
             "name": "provider",
             "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "required": true,
-            "name": "orgId",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "required": true,
-            "name": "userId",
-            "in": "query"
           },
           {
             "schema": {
@@ -1728,7 +1510,7 @@
             }
           },
           "400": {
-            "description": "Missing required parameters or caller headers"
+            "description": "Missing required caller headers"
           },
           "404": {
             "description": "Key not configured"
@@ -1739,7 +1521,7 @@
     "/keys/{provider}/source": {
       "put": {
         "summary": "Set key source preference for an org+provider",
-        "description": "Set whether an org uses its own key ('org') or the platform key ('platform') for a given provider. If switching to 'org', an org key must already be stored — otherwise returns 400.",
+        "description": "Set whether an org uses its own key ('org') or the platform key ('platform') for a given provider. If switching to 'org', an org key must already be stored — otherwise returns 400. Uses orgId from identity header.",
         "security": [
           {
             "serviceKeyAuth": []
@@ -1806,7 +1588,7 @@
       },
       "get": {
         "summary": "Get key source preference for an org+provider",
-        "description": "Returns the current key source preference for an org+provider. If no explicit preference is set, returns 'platform' with isDefault=true.",
+        "description": "Returns the current key source preference for an org+provider. If no explicit preference is set, returns 'platform' with isDefault=true. Uses orgId from identity header.",
         "security": [
           {
             "serviceKeyAuth": []
@@ -1820,15 +1602,6 @@
             "required": true,
             "name": "provider",
             "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "required": true,
-            "name": "orgId",
-            "in": "query"
           },
           {
             "schema": {
@@ -1865,9 +1638,6 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Missing orgId"
           }
         }
       }
@@ -1875,22 +1645,13 @@
     "/keys/sources": {
       "get": {
         "summary": "List all key source preferences for an org",
-        "description": "Returns all explicit key source preferences for an org. Providers not listed default to 'platform'.",
+        "description": "Returns all explicit key source preferences for an org. Providers not listed default to 'platform'. Uses orgId from identity header.",
         "security": [
           {
             "serviceKeyAuth": []
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "required": true,
-            "name": "orgId",
-            "in": "query"
-          },
           {
             "schema": {
               "type": "string",
@@ -1926,9 +1687,6 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Missing orgId"
           }
         }
       }
