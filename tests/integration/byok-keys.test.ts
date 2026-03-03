@@ -111,60 +111,6 @@ describe("Org Keys endpoints", () => {
     });
   });
 
-  describe("GET /internal/keys/:provider/decrypt", () => {
-    const callerHeaders = {
-      "x-caller-service": "brand-service",
-      "x-caller-method": "GET",
-      "x-caller-path": "/brands/generate",
-    };
-
-    it("should return decrypted org key", async () => {
-      await request(app)
-        .post("/internal/keys")
-        .set(identityHeaders)
-        .send({ orgId: "org-123", provider: "anthropic", apiKey: "sk-ant-secret123" });
-
-      const res = await request(app)
-        .get("/internal/keys/anthropic/decrypt")
-        .set({ ...identityHeaders, ...callerHeaders })
-        .query({ orgId: "org-123" });
-
-      expect(res.status).toBe(200);
-      expect(res.body.provider).toBe("anthropic");
-      expect(res.body.key).toBe("sk-ant-secret123");
-    });
-
-    it("should return 404 with clear 'Org key not found' message", async () => {
-      const res = await request(app)
-        .get("/internal/keys/anthropic/decrypt")
-        .set({ ...identityHeaders, ...callerHeaders })
-        .query({ orgId: "org-missing" });
-
-      expect(res.status).toBe(404);
-      expect(res.body.error).toContain("Org key not found");
-      expect(res.body.error).toContain("anthropic");
-      expect(res.body.error).toContain("org-missing");
-    });
-
-    it("should reject missing orgId", async () => {
-      const res = await request(app)
-        .get("/internal/keys/anthropic/decrypt")
-        .set({ ...identityHeaders, ...callerHeaders });
-
-      expect(res.status).toBe(400);
-    });
-
-    it("should reject missing caller headers", async () => {
-      const res = await request(app)
-        .get("/internal/keys/anthropic/decrypt")
-        .set(identityHeaders)
-        .query({ orgId: "org-123" });
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toContain("X-Caller-Service");
-    });
-  });
-
   describe("DELETE /internal/keys/:provider", () => {
     it("should delete an org key", async () => {
       await request(app)
@@ -180,17 +126,12 @@ describe("Org Keys endpoints", () => {
       expect(res.status).toBe(200);
       expect(res.body.provider).toBe("anthropic");
 
-      const decryptRes = await request(app)
-        .get("/internal/keys/anthropic/decrypt")
-        .set({
-          ...identityHeaders,
-          "x-caller-service": "test-service",
-          "x-caller-method": "POST",
-          "x-caller-path": "/test/endpoint",
-        })
+      const listRes = await request(app)
+        .get("/internal/keys")
+        .set(identityHeaders)
         .query({ orgId: "org-123" });
 
-      expect(decryptRes.status).toBe(404);
+      expect(listRes.body.keys).toHaveLength(0);
     });
 
     it("should succeed even if key doesn't exist (idempotent)", async () => {

@@ -396,41 +396,6 @@ registry.registerPath({
   },
 });
 
-const DecryptOrgKeyResponseSchema = z
-  .object({
-    provider: z.string(),
-    key: z.string(),
-  })
-  .openapi("DecryptOrgKeyResponse");
-
-registry.registerPath({
-  method: "get",
-  path: "/internal/keys/{provider}/decrypt",
-  summary: "Get decrypted org key (internal service use)",
-  description:
-    "Requires X-Caller-Service, X-Caller-Method, and X-Caller-Path headers to identify the calling endpoint. These are used to build the provider requirements registry.",
-  security: [{ serviceKeyAuth: [] }],
-  request: {
-    params: z.object({ provider: z.string() }),
-    query: OrgIdQuerySchema,
-    headers: IdentityHeadersSchema.extend({
-      "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
-      "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
-      "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/leads/search" }),
-    }),
-  },
-  responses: {
-    200: {
-      description: "Decrypted key",
-      content: {
-        "application/json": { schema: DecryptOrgKeyResponseSchema },
-      },
-    },
-    400: { description: "Missing orgId or required caller headers" },
-    404: { description: "Key not configured" },
-  },
-});
-
 // ==================== Internal: Platform Keys ====================
 
 export const CreatePlatformKeyRequestSchema = z
@@ -502,40 +467,6 @@ registry.registerPath({
       description: "List of platform keys",
       content: { "application/json": { schema: ListPlatformKeysResponseSchema } },
     },
-  },
-});
-
-const DecryptPlatformKeyResponseSchema = z
-  .object({
-    provider: z.string(),
-    key: z.string(),
-  })
-  .openapi("DecryptPlatformKeyResponse");
-
-registry.registerPath({
-  method: "get",
-  path: "/internal/platform-keys/{provider}/decrypt",
-  summary: "Get decrypted platform key (internal service use)",
-  description:
-    "Returns the decrypted platform-level key for the given provider. No orgId needed — platform keys are global. Requires X-Caller-* headers for provider requirements tracking.",
-  security: [{ serviceKeyAuth: [] }],
-  request: {
-    params: z.object({ provider: z.string() }),
-    headers: IdentityHeadersSchema.extend({
-      "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
-      "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
-      "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/leads/search" }),
-    }),
-  },
-  responses: {
-    200: {
-      description: "Decrypted key",
-      content: {
-        "application/json": { schema: DecryptPlatformKeyResponseSchema },
-      },
-    },
-    400: { description: "Missing required caller headers" },
-    404: { description: "Key not configured" },
   },
 });
 
@@ -641,6 +572,39 @@ registry.registerComponent("securitySchemes", "serviceKeyAuth", {
 });
 
 // ==================== Key Resolve Endpoints (/keys) ====================
+
+// Platform key decrypt — explicit, no auto-resolve
+const DecryptPlatformKeyDirectResponseSchema = z
+  .object({
+    provider: z.string(),
+    key: z.string(),
+  })
+  .openapi("DecryptPlatformKeyDirectResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/keys/platform/{provider}/decrypt",
+  summary: "Get decrypted platform key (direct)",
+  description:
+    "Returns the decrypted platform-level key for the given provider. No orgId/userId needed — platform keys are global. Requires X-Caller-* headers for provider requirements tracking.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    params: z.object({ provider: z.string() }),
+    headers: IdentityHeadersSchema.extend({
+      "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "billing" }),
+      "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
+      "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/billing/charge" }),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Decrypted platform key",
+      content: { "application/json": { schema: DecryptPlatformKeyDirectResponseSchema } },
+    },
+    400: { description: "Missing required caller headers" },
+    404: { description: "Platform key not configured" },
+  },
+});
 
 // Decrypt — auto-resolves key source via org_provider_key_sources preference
 export const DecryptKeyQuerySchema = z

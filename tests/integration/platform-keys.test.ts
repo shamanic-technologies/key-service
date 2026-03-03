@@ -102,62 +102,6 @@ describe("Platform Keys endpoints", () => {
     });
   });
 
-  describe("GET /internal/platform-keys/:provider/decrypt", () => {
-    const callerHeaders = {
-      "x-caller-service": "test-service",
-      "x-caller-method": "POST",
-      "x-caller-path": "/test/endpoint",
-    };
-
-    it("should return decrypted key", async () => {
-      await request(app)
-        .post("/internal/platform-keys")
-        .set(identityHeaders)
-        .send({ provider: "anthropic", apiKey: "sk-ant-secret123" });
-
-      const res = await request(app)
-        .get("/internal/platform-keys/anthropic/decrypt")
-        .set({ ...identityHeaders, ...callerHeaders });
-
-      expect(res.status).toBe(200);
-      expect(res.body.provider).toBe("anthropic");
-      expect(res.body.key).toBe("sk-ant-secret123");
-    });
-
-    it("should return 404 with clear 'Platform key not found' message", async () => {
-      const res = await request(app)
-        .get("/internal/platform-keys/anthropic/decrypt")
-        .set({ ...identityHeaders, ...callerHeaders });
-
-      expect(res.status).toBe(404);
-      expect(res.body.error).toContain("Platform key not found");
-      expect(res.body.error).toContain("anthropic");
-    });
-
-    it("should reject missing caller headers", async () => {
-      const res = await request(app)
-        .get("/internal/platform-keys/anthropic/decrypt")
-        .set(identityHeaders);
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toContain("X-Caller-Service");
-    });
-
-    it("should not require orgId", async () => {
-      await request(app)
-        .post("/internal/platform-keys")
-        .set(identityHeaders)
-        .send({ provider: "anthropic", apiKey: "sk-ant-secret123" });
-
-      const res = await request(app)
-        .get("/internal/platform-keys/anthropic/decrypt")
-        .set({ ...identityHeaders, ...callerHeaders });
-
-      expect(res.status).toBe(200);
-      expect(res.body.key).toBe("sk-ant-secret123");
-    });
-  });
-
   describe("DELETE /internal/platform-keys/:provider", () => {
     it("should delete a platform key", async () => {
       await request(app)
@@ -172,16 +116,11 @@ describe("Platform Keys endpoints", () => {
       expect(res.status).toBe(200);
       expect(res.body.provider).toBe("anthropic");
 
-      const decryptRes = await request(app)
-        .get("/internal/platform-keys/anthropic/decrypt")
-        .set({
-          ...identityHeaders,
-          "x-caller-service": "test-service",
-          "x-caller-method": "POST",
-          "x-caller-path": "/test/endpoint",
-        });
+      const listRes = await request(app)
+        .get("/internal/platform-keys")
+        .set(identityHeaders);
 
-      expect(decryptRes.status).toBe(404);
+      expect(listRes.body.keys).toHaveLength(0);
     });
 
     it("should succeed even if key doesn't exist (idempotent)", async () => {

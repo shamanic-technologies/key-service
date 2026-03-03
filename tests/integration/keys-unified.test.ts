@@ -56,6 +56,59 @@ describe("/keys endpoints", () => {
     });
   });
 
+  // ==================== PLATFORM DECRYPT (DIRECT) ====================
+
+  describe("GET /keys/platform/:provider/decrypt (direct)", () => {
+    it("should return decrypted platform key", async () => {
+      await request(app)
+        .post("/internal/platform-keys")
+        .set(identityHeaders)
+        .send({ provider: "stripe", apiKey: "sk_live_stripe_secret" });
+
+      const res = await request(app)
+        .get("/keys/platform/stripe/decrypt")
+        .set({ ...identityHeaders, ...callerHeaders });
+
+      expect(res.status).toBe(200);
+      expect(res.body.provider).toBe("stripe");
+      expect(res.body.key).toBe("sk_live_stripe_secret");
+    });
+
+    it("should return 404 when no platform key exists", async () => {
+      const res = await request(app)
+        .get("/keys/platform/stripe/decrypt")
+        .set({ ...identityHeaders, ...callerHeaders });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toContain("Platform key not found");
+      expect(res.body.error).toContain("stripe");
+    });
+
+    it("should reject missing caller headers", async () => {
+      const res = await request(app)
+        .get("/keys/platform/stripe/decrypt")
+        .set(identityHeaders);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("X-Caller-Service");
+    });
+
+    it("should not require orgId or userId query params", async () => {
+      await request(app)
+        .post("/internal/platform-keys")
+        .set(identityHeaders)
+        .send({ provider: "stripe", apiKey: "sk_live_stripe_no_org" });
+
+      const res = await request(app)
+        .get("/keys/platform/stripe/decrypt")
+        .set({ ...identityHeaders, ...callerHeaders });
+
+      expect(res.status).toBe(200);
+      expect(res.body.key).toBe("sk_live_stripe_no_org");
+      expect(res.body.provider).toBe("stripe");
+    });
+  });
+
   // ==================== DECRYPT (AUTO-RESOLVE) ====================
 
   describe("GET /keys/:provider/decrypt (auto-resolve)", () => {
