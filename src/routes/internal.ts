@@ -8,8 +8,6 @@ import { db } from "../db/index.js";
 import { userAuthKeys, orgKeys, platformKeys, providers, providerRequirements } from "../db/schema.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/api-key.js";
 import { encrypt, decrypt, maskKey } from "../lib/crypto.js";
-import { extractCallerHeaders } from "../lib/caller-headers.js";
-import { recordProviderRequirement } from "../lib/provider-registry.js";
 import { ensureProvider, getProviderByName } from "../lib/ensure-provider.js";
 import {
   CreateUserAuthKeyRequestSchema,
@@ -318,51 +316,6 @@ router.delete("/keys/:provider", async (req: Request, res: Response) => {
   }
 });
 
-/**
- * GET /internal/keys/:provider/decrypt
- * Get decrypted org key (for internal service use)
- */
-router.get("/keys/:provider/decrypt", async (req: Request, res: Response) => {
-  try {
-    const { provider: providerName } = req.params;
-    const orgId = req.query.orgId as string;
-
-    if (!orgId) {
-      return res.status(400).json({ error: "orgId required" });
-    }
-
-    const caller = extractCallerHeaders(req);
-    if (!caller) {
-      return res.status(400).json({
-        error: "Missing required headers: X-Caller-Service, X-Caller-Method, X-Caller-Path",
-      });
-    }
-
-    const provider = await getProviderByName(providerName);
-    if (!provider) {
-      return res.status(404).json({ error: `Org key not found: no '${providerName}' key configured for org '${orgId}'` });
-    }
-
-    const key = await db.query.orgKeys.findFirst({
-      where: and(eq(orgKeys.orgId, orgId), eq(orgKeys.providerId, provider.id)),
-    });
-
-    if (!key) {
-      return res.status(404).json({ error: `Org key not found: no '${providerName}' key configured for org '${orgId}'` });
-    }
-
-    await recordProviderRequirement(caller, providerName);
-
-    res.json({
-      provider: providerName,
-      key: decrypt(key.encryptedKey),
-    });
-  } catch (error) {
-    console.error("Decrypt org key error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 // ==================== PLATFORM KEYS ====================
 
 /**
@@ -458,46 +411,6 @@ router.delete("/platform-keys/:provider", async (req: Request, res: Response) =>
     });
   } catch (error) {
     console.error("Delete platform key error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-/**
- * GET /internal/platform-keys/:provider/decrypt
- * Get decrypted platform key (for internal service use)
- */
-router.get("/platform-keys/:provider/decrypt", async (req: Request, res: Response) => {
-  try {
-    const { provider: providerName } = req.params;
-
-    const caller = extractCallerHeaders(req);
-    if (!caller) {
-      return res.status(400).json({
-        error: "Missing required headers: X-Caller-Service, X-Caller-Method, X-Caller-Path",
-      });
-    }
-
-    const provider = await getProviderByName(providerName);
-    if (!provider) {
-      return res.status(404).json({ error: `Platform key not found: no '${providerName}' platform key configured` });
-    }
-
-    const key = await db.query.platformKeys.findFirst({
-      where: eq(platformKeys.providerId, provider.id),
-    });
-
-    if (!key) {
-      return res.status(404).json({ error: `Platform key not found: no '${providerName}' platform key configured` });
-    }
-
-    await recordProviderRequirement(caller, providerName);
-
-    res.json({
-      provider: providerName,
-      key: decrypt(key.encryptedKey),
-    });
-  } catch (error) {
-    console.error("Decrypt platform key error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
