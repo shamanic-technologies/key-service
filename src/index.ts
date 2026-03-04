@@ -51,6 +51,8 @@ app.use("/platform-keys", serviceKeyAuth, platformKeysRoutes);
 
 // Provider requirements — no identity headers needed
 app.use("/provider-requirements", serviceKeyAuth, providerRequirementsRoutes);
+// Backward-compat alias (workflow-service still calls /internal/provider-requirements)
+app.use("/internal/provider-requirements", serviceKeyAuth, providerRequirementsRoutes);
 
 // 404
 app.use((req, res) => {
