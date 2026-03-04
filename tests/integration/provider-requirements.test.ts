@@ -19,7 +19,6 @@ app.use(express.json());
 app.use("/keys", requireIdentityHeaders, keysRoutes);
 app.use("/platform-keys", platformKeysRoutes);
 app.use("/provider-requirements", providerRequirementsRoutes);
-app.use("/internal/provider-requirements", providerRequirementsRoutes);
 
 const identityHeaders = {
   "x-org-id": "test-org-id",
@@ -310,27 +309,6 @@ describe("Provider Requirements", () => {
         .send({ endpoints: [] });
 
       expect(res.status).toBe(400);
-    });
-
-    it("should work at /internal/provider-requirements (backward compat)", async () => {
-      await insertTestProviderRequirement({
-        service: "apollo",
-        method: "POST",
-        path: "/leads/search",
-        provider: "apollo",
-      });
-
-      const res = await request(app)
-        .post("/internal/provider-requirements")
-        .send({
-          endpoints: [
-            { service: "apollo", method: "POST", path: "/leads/search" },
-          ],
-        });
-
-      expect(res.status).toBe(200);
-      expect(res.body.requirements).toHaveLength(1);
-      expect(res.body.providers).toEqual(["apollo"]);
     });
 
     it("should only return providers for matching endpoints, not all", async () => {
