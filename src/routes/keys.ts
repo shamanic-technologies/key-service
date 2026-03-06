@@ -115,48 +115,6 @@ router.post("/", async (req: Request, res: Response) => {
  * We handle this by placing this route after more specific routes.
  */
 
-// ==================== PLATFORM DECRYPT (DIRECT) ====================
-
-/**
- * GET /keys/platform/:provider/decrypt
- * Get decrypted platform key directly — no auto-resolve, no orgId/userId needed
- */
-router.get("/platform/:provider/decrypt", async (req: Request, res: Response) => {
-  try {
-    const { provider: providerName } = req.params;
-
-    const caller = extractCallerHeaders(req);
-    if (!caller) {
-      return res.status(400).json({
-        error: "Missing required headers: X-Caller-Service, X-Caller-Method, X-Caller-Path",
-      });
-    }
-
-    const provider = await getProviderByName(providerName);
-    if (!provider) {
-      return res.status(404).json({ error: `Platform key not found: no '${providerName}' platform key configured` });
-    }
-
-    const key = await db.query.platformKeys.findFirst({
-      where: eq(platformKeys.providerId, provider.id),
-    });
-
-    if (!key) {
-      return res.status(404).json({ error: `Platform key not found: no '${providerName}' platform key configured` });
-    }
-
-    await recordProviderRequirement(caller, providerName);
-
-    res.json({
-      provider: providerName,
-      key: decrypt(key.encryptedKey),
-    });
-  } catch (error) {
-    console.error("Decrypt platform key error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 // ==================== KEY SOURCE PREFERENCES ====================
 
 /**

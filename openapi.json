@@ -1342,30 +1342,6 @@
             "schema": {
               "type": "string",
               "minLength": 1,
-              "description": "Internal org UUID from client-service",
-              "example": "org-uuid-123"
-            },
-            "required": true,
-            "description": "Internal org UUID from client-service",
-            "name": "x-org-id",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Internal user UUID from client-service",
-              "example": "user-uuid-456"
-            },
-            "required": true,
-            "description": "Internal user UUID from client-service",
-            "name": "x-user-id",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1,
               "description": "Name of the calling service",
               "example": "billing"
             },
