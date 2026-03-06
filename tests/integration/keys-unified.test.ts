@@ -3,11 +3,14 @@ import request from "supertest";
 import express from "express";
 import keysRoutes from "../../src/routes/keys.js";
 import platformKeysRoutes from "../../src/routes/platform-keys.js";
+import platformDecryptRoutes from "../../src/routes/platform-decrypt.js";
 import { requireIdentityHeaders } from "../../src/middleware/auth.js";
 import { cleanTestData, closeDb } from "../helpers/test-db.js";
 
 const app = express();
 app.use(express.json());
+// Platform decrypt mounted before /keys — no identity headers (matches prod routing)
+app.use("/keys/platform", platformDecryptRoutes);
 app.use("/keys", requireIdentityHeaders, keysRoutes);
 app.use("/platform-keys", platformKeysRoutes);
 
@@ -57,14 +60,14 @@ describe("/keys endpoints", () => {
   // ==================== PLATFORM DECRYPT (DIRECT) ====================
 
   describe("GET /keys/platform/:provider/decrypt (direct)", () => {
-    it("should return decrypted platform key", async () => {
+    it("should return decrypted platform key without identity headers", async () => {
       await request(app)
         .post("/platform-keys")
         .send({ provider: "stripe", apiKey: "sk_live_stripe_secret" });
 
       const res = await request(app)
         .get("/keys/platform/stripe/decrypt")
-        .set({ ...identityHeaders, ...callerHeaders });
+        .set(callerHeaders);
 
       expect(res.status).toBe(200);
       expect(res.body.provider).toBe("stripe");
@@ -74,7 +77,7 @@ describe("/keys endpoints", () => {
     it("should return 404 when no platform key exists", async () => {
       const res = await request(app)
         .get("/keys/platform/stripe/decrypt")
-        .set({ ...identityHeaders, ...callerHeaders });
+        .set(callerHeaders);
 
       expect(res.status).toBe(404);
       expect(res.body.error).toContain("Platform key not found");
@@ -83,21 +86,21 @@ describe("/keys endpoints", () => {
 
     it("should reject missing caller headers", async () => {
       const res = await request(app)
-        .get("/keys/platform/stripe/decrypt")
-        .set(identityHeaders);
+        .get("/keys/platform/stripe/decrypt");
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain("X-Caller-Service");
     });
 
-    it("should not require orgId or userId query params", async () => {
+    it("should not require orgId or userId headers", async () => {
       await request(app)
         .post("/platform-keys")
         .send({ provider: "stripe", apiKey: "sk_live_stripe_no_org" });
 
+      // Only caller headers — no identity headers
       const res = await request(app)
         .get("/keys/platform/stripe/decrypt")
-        .set({ ...identityHeaders, ...callerHeaders });
+        .set(callerHeaders);
 
       expect(res.status).toBe(200);
       expect(res.body.key).toBe("sk_live_stripe_no_org");

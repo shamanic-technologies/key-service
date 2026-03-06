@@ -12,6 +12,7 @@ import validateRoutes from "./routes/validate.js";
 import keysRoutes from "./routes/keys.js";
 import apiKeysRoutes from "./routes/api-keys.js";
 import platformKeysRoutes from "./routes/platform-keys.js";
+import platformDecryptRoutes from "./routes/platform-decrypt.js";
 import providerRequirementsRoutes from "./routes/provider-requirements.js";
 import { serviceKeyAuth, requireIdentityHeaders } from "./middleware/auth.js";
 
@@ -39,6 +40,9 @@ app.use(healthRoutes);
 
 // API key validation (service-to-service, authenticated via X-API-Key)
 app.use(serviceKeyAuth, validateRoutes);
+
+// Platform key decrypt — no identity headers needed (platform keys are global)
+app.use("/keys/platform", serviceKeyAuth, platformDecryptRoutes);
 
 // Key management endpoints (resolve, preferences, org key CRUD)
 app.use("/keys", serviceKeyAuth, requireIdentityHeaders, keysRoutes);

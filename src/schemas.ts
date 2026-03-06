@@ -539,7 +539,7 @@ registry.registerPath({
   security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({ provider: z.string() }),
-    headers: IdentityHeadersSchema.extend({
+    headers: z.object({
       "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "billing" }),
       "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
       "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/billing/charge" }),
