@@ -21,6 +21,13 @@ const IdentityHeadersSchema = z.object({
   "x-user-id": z.string().min(1).openapi({ description: "Internal user UUID from client-service", example: "user-uuid-456" }),
 });
 
+/** Optional workflow tracking headers — injected by workflow-service on all workflow HTTP calls */
+const TrackingHeadersSchema = z.object({
+  "x-campaign-id": z.string().optional().openapi({ description: "Campaign identifier (injected by workflow-service)", example: "campaign-uuid-789" }),
+  "x-brand-id": z.string().optional().openapi({ description: "Brand identifier (injected by workflow-service)", example: "brand-uuid-012" }),
+  "x-workflow-name": z.string().optional().openapi({ description: "Workflow name (injected by workflow-service)", example: "lead-enrichment" }),
+});
+
 // ==================== Health ====================
 
 const HealthResponseSchema = z
@@ -75,6 +82,7 @@ registry.registerPath({
   description: "Pass the API key to validate as ?key= query parameter. Authenticated via X-API-Key (service key).",
   security: [{ serviceKeyAuth: [] }],
   request: {
+    headers: TrackingHeadersSchema,
     query: ValidateKeyQuerySchema,
   },
   responses: {
@@ -101,7 +109,7 @@ registry.registerPath({
       provider: z.string(),
     }),
     query: ValidateKeyQuerySchema,
-    headers: z.object({
+    headers: TrackingHeadersSchema.extend({
       "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
       "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
       "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/leads/search" }),
@@ -151,7 +159,7 @@ registry.registerPath({
   summary: "List user auth keys for an org",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    headers: IdentityHeadersSchema,
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema),
     query: ListUserAuthKeysQuerySchema,
   },
   responses: {
@@ -188,7 +196,7 @@ registry.registerPath({
   summary: "Create a new user auth key",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    headers: IdentityHeadersSchema,
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema),
     body: {
       content: { "application/json": { schema: CreateUserAuthKeyRequestSchema } },
     },
@@ -214,7 +222,7 @@ registry.registerPath({
   summary: "Delete a user auth key",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    headers: IdentityHeadersSchema,
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema),
     params: z.object({ id: z.string().uuid() }),
   },
   responses: {
@@ -242,7 +250,7 @@ registry.registerPath({
   description: "Uses orgId and userId from identity headers (x-org-id, x-user-id). No request body needed.",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    headers: IdentityHeadersSchema,
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema),
   },
   responses: {
     200: {
@@ -276,7 +284,7 @@ registry.registerPath({
   description: "Uses orgId from identity header (x-org-id).",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    headers: IdentityHeadersSchema,
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema),
   },
   responses: {
     200: {
@@ -308,7 +316,7 @@ registry.registerPath({
   description: "Uses orgId from identity header (x-org-id).",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    headers: IdentityHeadersSchema,
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema),
     body: {
       content: {
         "application/json": { schema: CreateOrgKeyRequestSchema },
@@ -340,7 +348,7 @@ registry.registerPath({
   description: "Uses orgId from identity header (x-org-id).",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    headers: IdentityHeadersSchema,
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema),
     params: z.object({
       provider: z.string(),
     }),
@@ -380,6 +388,7 @@ registry.registerPath({
     "Upsert a platform-level API key. Platform keys are global — not tied to any org. Typically registered once at deployment. No identity headers needed.",
   security: [{ serviceKeyAuth: [] }],
   request: {
+    headers: TrackingHeadersSchema,
     body: {
       content: {
         "application/json": { schema: CreatePlatformKeyRequestSchema },
@@ -418,6 +427,9 @@ registry.registerPath({
   summary: "List all platform keys",
   description: "No identity headers needed.",
   security: [{ serviceKeyAuth: [] }],
+  request: {
+    headers: TrackingHeadersSchema,
+  },
   responses: {
     200: {
       description: "List of platform keys",
@@ -440,6 +452,7 @@ registry.registerPath({
   description: "No identity headers needed.",
   security: [{ serviceKeyAuth: [] }],
   request: {
+    headers: TrackingHeadersSchema,
     params: z.object({
       provider: z.string(),
     }),
@@ -494,6 +507,7 @@ registry.registerPath({
     "Given a list of service endpoints (service + method + path), returns which third-party providers each endpoint has been observed requesting. Used by workflow-service to determine which keys are needed before execution. No identity headers needed.",
   security: [{ serviceKeyAuth: [] }],
   request: {
+    headers: TrackingHeadersSchema,
     body: {
       content: {
         "application/json": { schema: ProviderRequirementsRequestSchema },
@@ -539,7 +553,7 @@ registry.registerPath({
   security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({ provider: z.string() }),
-    headers: z.object({
+    headers: TrackingHeadersSchema.extend({
       "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "billing" }),
       "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
       "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/billing/charge" }),
@@ -574,7 +588,7 @@ registry.registerPath({
   security: [{ serviceKeyAuth: [] }],
   request: {
     params: z.object({ provider: z.string() }),
-    headers: IdentityHeadersSchema.extend({
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema).extend({
       "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "apollo" }),
       "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
       "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/leads/search" }),
@@ -615,7 +629,7 @@ registry.registerPath({
     "Set whether an org uses its own key ('org') or the platform key ('platform') for a given provider. If switching to 'org', an org key must already be stored — otherwise returns 400. Uses orgId from identity header.",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    headers: IdentityHeadersSchema,
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema),
     params: z.object({ provider: z.string() }),
     body: {
       content: { "application/json": { schema: SetKeySourceRequestSchema } },
@@ -647,7 +661,7 @@ registry.registerPath({
     "Returns the current key source preference for an org+provider. If no explicit preference is set, returns 'platform' with isDefault=true. Uses orgId from identity header.",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    headers: IdentityHeadersSchema,
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema),
     params: z.object({ provider: z.string() }),
   },
   responses: {
@@ -680,7 +694,7 @@ registry.registerPath({
     "Returns all explicit key source preferences for an org. Providers not listed default to 'platform'. Uses orgId from identity header.",
   security: [{ serviceKeyAuth: [] }],
   request: {
-    headers: IdentityHeadersSchema,
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema),
   },
   responses: {
     200: {
