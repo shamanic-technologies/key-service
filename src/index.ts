@@ -14,7 +14,7 @@ import apiKeysRoutes from "./routes/api-keys.js";
 import platformKeysRoutes from "./routes/platform-keys.js";
 import platformDecryptRoutes from "./routes/platform-decrypt.js";
 import providerRequirementsRoutes from "./routes/provider-requirements.js";
-import { serviceKeyAuth, requireIdentityHeaders } from "./middleware/auth.js";
+import { serviceKeyAuth, requireIdentityHeaders, captureTrackingHeaders } from "./middleware/auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -24,6 +24,7 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+app.use(captureTrackingHeaders);
 
 // OpenAPI spec (public)
 const openapiPath = join(__dirname, "..", "openapi.json");

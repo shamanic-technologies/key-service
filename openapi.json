@@ -696,6 +696,39 @@
             "description": "The API key to validate (distrib.usr_*)",
             "name": "key",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
           }
         ],
         "responses": {
@@ -747,6 +780,39 @@
             "description": "The API key to validate (distrib.usr_*)",
             "name": "key",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
           },
           {
             "schema": {
@@ -848,6 +914,39 @@
             "description": "Internal user UUID from client-service",
             "name": "x-user-id",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
           }
         ],
         "responses": {
@@ -893,6 +992,39 @@
             "required": true,
             "description": "Internal user UUID from client-service",
             "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
             "in": "header"
           }
         ],
@@ -963,6 +1095,39 @@
             "description": "Internal user UUID from client-service",
             "name": "x-user-id",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1015,6 +1180,39 @@
             "description": "Internal user UUID from client-service",
             "name": "x-user-id",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1064,6 +1262,39 @@
             "description": "Internal user UUID from client-service",
             "name": "x-user-id",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1110,6 +1341,39 @@
             "required": true,
             "description": "Internal user UUID from client-service",
             "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
             "in": "header"
           }
         ],
@@ -1180,6 +1444,39 @@
             "description": "Internal user UUID from client-service",
             "name": "x-user-id",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1203,6 +1500,41 @@
         "security": [
           {
             "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
           }
         ],
         "requestBody": {
@@ -1238,6 +1570,41 @@
             "serviceKeyAuth": []
           }
         ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of platform keys",
@@ -1269,6 +1636,39 @@
             "required": true,
             "name": "provider",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1292,6 +1692,41 @@
         "security": [
           {
             "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
           }
         ],
         "requestBody": {
@@ -1337,6 +1772,39 @@
             "required": true,
             "name": "provider",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
           },
           {
             "schema": {
@@ -1440,6 +1908,39 @@
           {
             "schema": {
               "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
               "minLength": 1,
               "description": "Name of the calling service",
               "example": "apollo"
@@ -1535,6 +2036,39 @@
             "description": "Internal user UUID from client-service",
             "name": "x-user-id",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
           }
         ],
         "requestBody": {
@@ -1602,6 +2136,39 @@
             "description": "Internal user UUID from client-service",
             "name": "x-user-id",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1650,6 +2217,39 @@
             "required": true,
             "description": "Internal user UUID from client-service",
             "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand identifier (injected by workflow-service)",
+              "example": "brand-uuid-012"
+            },
+            "required": false,
+            "description": "Brand identifier (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow name (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow name (injected by workflow-service)",
+            "name": "x-workflow-name",
             "in": "header"
           }
         ],

@@ -4,5 +4,10 @@ declare namespace Express {
       orgId: string;
       userId: string;
     };
+    tracking?: {
+      campaignId?: string;
+      brandId?: string;
+      workflowName?: string;
+    } | null;
   }
 }
