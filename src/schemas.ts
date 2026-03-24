@@ -26,6 +26,7 @@ const TrackingHeadersSchema = z.object({
   "x-campaign-id": z.string().optional().openapi({ description: "Campaign identifier (injected by workflow-service)", example: "campaign-uuid-789" }),
   "x-brand-id": z.string().optional().openapi({ description: "Brand identifier (injected by workflow-service)", example: "brand-uuid-012" }),
   "x-workflow-name": z.string().optional().openapi({ description: "Workflow name (injected by workflow-service)", example: "lead-enrichment" }),
+  "x-feature-slug": z.string().optional().openapi({ description: "Feature slug for tracking (injected by workflow-service)", example: "press-outreach" }),
 });
 
 // ==================== Health ====================

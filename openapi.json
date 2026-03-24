@@ -729,6 +729,17 @@
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
           }
         ],
         "responses": {
@@ -812,6 +823,17 @@
             "required": false,
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
             "in": "header"
           },
           {
@@ -947,6 +969,17 @@
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1025,6 +1058,17 @@
             "required": false,
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
             "in": "header"
           }
         ],
@@ -1128,6 +1172,17 @@
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1213,6 +1268,17 @@
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1295,6 +1361,17 @@
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1374,6 +1451,17 @@
             "required": false,
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
             "in": "header"
           }
         ],
@@ -1477,6 +1565,17 @@
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1534,6 +1633,17 @@
             "required": false,
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
             "in": "header"
           }
         ],
@@ -1603,6 +1713,17 @@
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1669,6 +1790,17 @@
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1726,6 +1858,17 @@
             "required": false,
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
             "in": "header"
           }
         ],
@@ -1804,6 +1947,17 @@
             "required": false,
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
             "in": "header"
           },
           {
@@ -1941,6 +2095,17 @@
           {
             "schema": {
               "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
               "minLength": 1,
               "description": "Name of the calling service",
               "example": "apollo"
@@ -2069,6 +2234,17 @@
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
           }
         ],
         "requestBody": {
@@ -2169,6 +2345,17 @@
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
           }
         ],
         "responses": {
@@ -2250,6 +2437,17 @@
             "required": false,
             "description": "Workflow name (injected by workflow-service)",
             "name": "x-workflow-name",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
             "in": "header"
           }
         ],
