@@ -8,6 +8,7 @@ declare namespace Express {
       campaignId?: string;
       brandId?: string;
       workflowName?: string;
+      featureSlug?: string;
     } | null;
   }
 }

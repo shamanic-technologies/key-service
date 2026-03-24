@@ -12,6 +12,7 @@ describe("extractTrackingHeaders", () => {
         "x-campaign-id": "camp-123",
         "x-brand-id": "brand-456",
         "x-workflow-name": "lead-enrichment",
+        "x-feature-slug": "press-outreach",
       })
     );
 
@@ -19,6 +20,7 @@ describe("extractTrackingHeaders", () => {
       campaignId: "camp-123",
       brandId: "brand-456",
       workflowName: "lead-enrichment",
+      featureSlug: "press-outreach",
     });
   });
 
@@ -46,6 +48,16 @@ describe("extractTrackingHeaders", () => {
     );
 
     expect(result).toEqual({ brandId: "brand-456", workflowName: "my-workflow" });
+  });
+
+  it("should extract x-feature-slug alone", () => {
+    const result = extractTrackingHeaders(
+      mockRequest({
+        "x-feature-slug": "press-outreach",
+      })
+    );
+
+    expect(result).toEqual({ featureSlug: "press-outreach" });
   });
 
   it("should ignore empty string headers", () => {
@@ -77,6 +89,7 @@ describe("extractTrackingHeaders", () => {
         "x-campaign-id": "",
         "x-brand-id": "",
         "x-workflow-name": "",
+        "x-feature-slug": "",
       })
     );
 
@@ -89,6 +102,7 @@ describe("extractTrackingHeaders", () => {
         "x-campaign-id": "  camp-123  ",
         "x-brand-id": "  brand-456  ",
         "x-workflow-name": "  my-workflow  ",
+        "x-feature-slug": "  press-outreach  ",
       })
     );
 
@@ -96,6 +110,7 @@ describe("extractTrackingHeaders", () => {
       campaignId: "camp-123",
       brandId: "brand-456",
       workflowName: "my-workflow",
+      featureSlug: "press-outreach",
     });
   });
 });
