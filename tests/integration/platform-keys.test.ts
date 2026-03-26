@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import request from "supertest";
 import express from "express";
 import platformKeysRoutes from "../../src/routes/platform-keys.js";
@@ -65,6 +65,56 @@ describe("Platform Keys endpoints", () => {
         .send({ provider: "anthropic" });
 
       expect(res.status).toBe(400);
+    });
+
+    it("should log provider registration on create", async () => {
+      const logSpy = vi.spyOn(console, "log");
+
+      await request(app)
+        .post("/platform-keys")
+        .send({ provider: "serper-dev", apiKey: "sk-serper-abc" });
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[key-service] POST /platform-keys: registering provider="serper-dev"')
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[key-service] Platform key created: provider="serper-dev"')
+      );
+
+      logSpy.mockRestore();
+    });
+
+    it("should log provider registration on update", async () => {
+      await request(app)
+        .post("/platform-keys")
+        .send({ provider: "serper-dev", apiKey: "sk-serper-old" });
+
+      const logSpy = vi.spyOn(console, "log");
+
+      await request(app)
+        .post("/platform-keys")
+        .send({ provider: "serper-dev", apiKey: "sk-serper-new" });
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[key-service] Platform key updated: provider="serper-dev"')
+      );
+
+      logSpy.mockRestore();
+    });
+
+    it("should log warning on invalid request body", async () => {
+      const warnSpy = vi.spyOn(console, "warn");
+
+      await request(app)
+        .post("/platform-keys")
+        .send({ provider: "anthropic" });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("[key-service] POST /platform-keys rejected"),
+        expect.anything()
+      );
+
+      warnSpy.mockRestore();
     });
   });
 

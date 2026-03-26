@@ -17,6 +17,7 @@ export async function ensureProvider(name: string): Promise<string> {
       .values({ name })
       .returning();
     provider = created;
+    console.log(`[key-service] New provider created: name="${name}" id=${provider.id}`);
   }
 
   return provider.id;
