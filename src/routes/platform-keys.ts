@@ -50,10 +50,13 @@ router.post("/", async (req: Request, res: Response) => {
   try {
     const parsed = CreatePlatformKeyRequestSchema.safeParse(req.body);
     if (!parsed.success) {
+      console.warn(`[key-service] POST /platform-keys rejected: invalid request body`, parsed.error.flatten());
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
     const { provider: providerName, apiKey } = parsed.data;
+    console.log(`[key-service] POST /platform-keys: registering provider="${providerName}"`);
+
     const providerId = await ensureProvider(providerName);
     const encryptedKey = encrypt(apiKey);
 
@@ -67,11 +70,13 @@ router.post("/", async (req: Request, res: Response) => {
         .update(platformKeys)
         .set({ encryptedKey, updatedAt: new Date() })
         .where(eq(platformKeys.id, existing.id));
+      console.log(`[key-service] Platform key updated: provider="${providerName}" providerId=${providerId}`);
     } else {
       await db.insert(platformKeys).values({
         providerId,
         encryptedKey,
       });
+      console.log(`[key-service] Platform key created: provider="${providerName}" providerId=${providerId}`);
     }
 
     res.json({
@@ -80,7 +85,7 @@ router.post("/", async (req: Request, res: Response) => {
       message: `${providerName} platform key saved successfully`,
     });
   } catch (error) {
-    console.error("Set platform key error:", error);
+    console.error(`[key-service] POST /platform-keys FAILED for provider="${req.body?.provider ?? "unknown"}":`, error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

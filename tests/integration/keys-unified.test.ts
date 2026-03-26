@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import request from "supertest";
 import express from "express";
 import keysRoutes from "../../src/routes/keys.js";
@@ -183,6 +183,34 @@ describe("/keys endpoints", () => {
         .set({ ...identityHeaders, ...callerHeaders });
 
       expect(res.status).toBe(404);
+    });
+
+    it("should log warning when provider not found on decrypt", async () => {
+      const warnSpy = vi.spyOn(console, "warn");
+
+      await request(app)
+        .get("/keys/serper-dev/decrypt")
+        .set({ ...identityHeaders, ...callerHeaders });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("[key-service] GET /keys/serper-dev/decrypt → 404: provider not found")
+      );
+
+      warnSpy.mockRestore();
+    });
+
+    it("should log warning on platform decrypt 404 for unknown provider", async () => {
+      const warnSpy = vi.spyOn(console, "warn");
+
+      await request(app)
+        .get("/keys/platform/serper-dev/decrypt")
+        .set(callerHeaders);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("[key-service] GET /keys/platform/serper-dev/decrypt → 404: provider not found")
+      );
+
+      warnSpy.mockRestore();
     });
 
     it("should reject missing caller headers", async () => {

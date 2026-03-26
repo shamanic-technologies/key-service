@@ -31,6 +31,7 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
 
     const provider = await getProviderByName(providerName);
     if (!provider) {
+      console.warn(`[key-service] GET /keys/platform/${providerName}/decrypt → 404: provider not found in providers table`);
       return res.status(404).json({ error: `Platform key not found: no '${providerName}' platform key configured` });
     }
 
@@ -39,6 +40,7 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
     });
 
     if (!key) {
+      console.warn(`[key-service] GET /keys/platform/${providerName}/decrypt → 404: provider exists but no platform key row`);
       return res.status(404).json({ error: `Platform key not found: no '${providerName}' platform key configured` });
     }
 
