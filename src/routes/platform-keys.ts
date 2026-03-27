@@ -55,33 +55,29 @@ router.post("/", async (req: Request, res: Response) => {
     }
 
     const { provider: providerName, apiKey } = parsed.data;
-    console.log(`[key-service] POST /platform-keys: registering provider="${providerName}"`);
-
     const providerId = await ensureProvider(providerName);
     const encryptedKey = encrypt(apiKey);
 
-    // Upsert
+    // Upsert — only write if the value actually changed
     const existing = await db.query.platformKeys.findFirst({
       where: eq(platformKeys.providerId, providerId),
     });
 
     if (existing) {
       const existingKey = decrypt(existing.encryptedKey);
-      if (existingKey === apiKey) {
-        console.log(`[key-service] Platform key unchanged, skipping: provider="${providerName}"`);
-      } else {
+      if (existingKey !== apiKey) {
         await db
           .update(platformKeys)
           .set({ encryptedKey, updatedAt: new Date() })
           .where(eq(platformKeys.id, existing.id));
-        console.log(`[key-service] Platform key updated: provider="${providerName}" providerId=${providerId}`);
+        console.log(`[key-service] Platform key updated: provider="${providerName}"`);
       }
     } else {
       await db.insert(platformKeys).values({
         providerId,
         encryptedKey,
       });
-      console.log(`[key-service] Platform key created: provider="${providerName}" providerId=${providerId}`);
+      console.log(`[key-service] Platform key created: provider="${providerName}"`);
     }
 
     res.json({
