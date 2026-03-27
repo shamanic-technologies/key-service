@@ -102,6 +102,28 @@ describe("Platform Keys endpoints", () => {
       logSpy.mockRestore();
     });
 
+    it("should skip DB write and log 'unchanged' when re-registering identical key", async () => {
+      await request(app)
+        .post("/platform-keys")
+        .send({ provider: "serper-dev", apiKey: "sk-serper-same" });
+
+      const logSpy = vi.spyOn(console, "log");
+
+      const res = await request(app)
+        .post("/platform-keys")
+        .send({ provider: "serper-dev", apiKey: "sk-serper-same" });
+
+      expect(res.status).toBe(200);
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[key-service] Platform key unchanged, skipping: provider="serper-dev"')
+      );
+      expect(logSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('[key-service] Platform key updated')
+      );
+
+      logSpy.mockRestore();
+    });
+
     it("should log warning on invalid request body", async () => {
       const warnSpy = vi.spyOn(console, "warn");
 

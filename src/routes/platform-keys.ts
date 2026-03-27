@@ -66,11 +66,16 @@ router.post("/", async (req: Request, res: Response) => {
     });
 
     if (existing) {
-      await db
-        .update(platformKeys)
-        .set({ encryptedKey, updatedAt: new Date() })
-        .where(eq(platformKeys.id, existing.id));
-      console.log(`[key-service] Platform key updated: provider="${providerName}" providerId=${providerId}`);
+      const existingKey = decrypt(existing.encryptedKey);
+      if (existingKey === apiKey) {
+        console.log(`[key-service] Platform key unchanged, skipping: provider="${providerName}"`);
+      } else {
+        await db
+          .update(platformKeys)
+          .set({ encryptedKey, updatedAt: new Date() })
+          .where(eq(platformKeys.id, existing.id));
+        console.log(`[key-service] Platform key updated: provider="${providerName}" providerId=${providerId}`);
+      }
     } else {
       await db.insert(platformKeys).values({
         providerId,
