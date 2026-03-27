@@ -192,6 +192,42 @@ describe("Provider Requirements", () => {
       expect(providerNames).toEqual(["anthropic", "openai"]);
     });
 
+    it("should handle concurrent upserts without duplicate-key errors", async () => {
+      await request(app)
+        .post("/platform-keys")
+        .send({ provider: "anthropic", apiKey: "sk-ant-race" });
+
+      const headers = {
+        "x-caller-service": "articles-service",
+        "x-caller-method": "GET",
+        "x-caller-path": "/keys/anthropic/decrypt",
+      };
+
+      // Fire 10 concurrent decrypt calls — before the fix, this caused
+      // "duplicate key value violates unique constraint idx_provider_req_unique"
+      const results = await Promise.all(
+        Array.from({ length: 10 }, () =>
+          request(app)
+            .get("/keys/platform/anthropic/decrypt")
+            .set(headers)
+        )
+      );
+
+      // All should succeed (200), none should 500
+      for (const res of results) {
+        expect(res.status).toBe(200);
+      }
+
+      // Exactly one row should exist
+      const reqs = await db.query.providerRequirements.findMany({
+        where: and(
+          eq(providerRequirements.service, "articles-service"),
+          eq(providerRequirements.provider, "anthropic")
+        ),
+      });
+      expect(reqs).toHaveLength(1);
+    });
+
     it("should not record when key is not found (404)", async () => {
       const res = await request(app)
         .get("/keys/platform/stripe/decrypt")
