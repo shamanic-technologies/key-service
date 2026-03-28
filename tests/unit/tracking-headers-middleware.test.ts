@@ -22,14 +22,14 @@ describe("captureTrackingHeaders middleware", () => {
       .set({
         "x-campaign-id": "camp-1",
         "x-brand-id": "brand-1",
-        "x-workflow-name": "wf-1",
+        "x-workflow-slug": "wf-1",
         "x-feature-slug": "press-outreach",
       });
     expect(res.status).toBe(200);
     expect(res.body.tracking).toEqual({
       campaignId: "camp-1",
       brandId: "brand-1",
-      workflowName: "wf-1",
+      workflowSlug: "wf-1",
       featureSlug: "press-outreach",
     });
   });
@@ -51,7 +51,7 @@ describe("captureTrackingHeaders middleware", () => {
   it("should never reject — tracking headers are optional", async () => {
     const res = await request(app)
       .get("/test")
-      .set({ "x-campaign-id": "", "x-brand-id": "", "x-workflow-name": "", "x-feature-slug": "" });
+      .set({ "x-campaign-id": "", "x-brand-id": "", "x-workflow-slug": "", "x-feature-slug": "" });
     expect(res.status).toBe(200);
     expect(res.body.tracking).toBeNull();
   });

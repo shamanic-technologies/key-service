@@ -3,7 +3,7 @@ import { Request } from "express";
 export interface TrackingInfo {
   campaignId: string;
   brandId: string;
-  workflowName: string;
+  workflowSlug: string;
   featureSlug: string;
 }
 
@@ -15,7 +15,7 @@ export interface TrackingInfo {
 export function extractTrackingHeaders(req: Request): Partial<TrackingInfo> | null {
   const campaignId = req.headers["x-campaign-id"];
   const brandId = req.headers["x-brand-id"];
-  const workflowName = req.headers["x-workflow-name"];
+  const workflowSlug = req.headers["x-workflow-slug"];
   const featureSlug = req.headers["x-feature-slug"];
 
   const result: Partial<TrackingInfo> = {};
@@ -26,8 +26,8 @@ export function extractTrackingHeaders(req: Request): Partial<TrackingInfo> | nu
   if (typeof brandId === "string" && brandId.trim()) {
     result.brandId = brandId.trim();
   }
-  if (typeof workflowName === "string" && workflowName.trim()) {
-    result.workflowName = workflowName.trim();
+  if (typeof workflowSlug === "string" && workflowSlug.trim()) {
+    result.workflowSlug = workflowSlug.trim();
   }
   if (typeof featureSlug === "string" && featureSlug.trim()) {
     result.featureSlug = featureSlug.trim();

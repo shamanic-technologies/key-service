@@ -11,7 +11,7 @@ describe("extractTrackingHeaders", () => {
       mockRequest({
         "x-campaign-id": "camp-123",
         "x-brand-id": "brand-456",
-        "x-workflow-name": "lead-enrichment",
+        "x-workflow-slug": "lead-enrichment",
         "x-feature-slug": "press-outreach",
       })
     );
@@ -19,7 +19,7 @@ describe("extractTrackingHeaders", () => {
     expect(result).toEqual({
       campaignId: "camp-123",
       brandId: "brand-456",
-      workflowName: "lead-enrichment",
+      workflowSlug: "lead-enrichment",
       featureSlug: "press-outreach",
     });
   });
@@ -43,11 +43,11 @@ describe("extractTrackingHeaders", () => {
     const result = extractTrackingHeaders(
       mockRequest({
         "x-brand-id": "brand-456",
-        "x-workflow-name": "my-workflow",
+        "x-workflow-slug": "my-workflow",
       })
     );
 
-    expect(result).toEqual({ brandId: "brand-456", workflowName: "my-workflow" });
+    expect(result).toEqual({ brandId: "brand-456", workflowSlug: "my-workflow" });
   });
 
   it("should extract x-feature-slug alone", () => {
@@ -65,7 +65,7 @@ describe("extractTrackingHeaders", () => {
       mockRequest({
         "x-campaign-id": "",
         "x-brand-id": "brand-456",
-        "x-workflow-name": "",
+        "x-workflow-slug": "",
       })
     );
 
@@ -88,7 +88,7 @@ describe("extractTrackingHeaders", () => {
       mockRequest({
         "x-campaign-id": "",
         "x-brand-id": "",
-        "x-workflow-name": "",
+        "x-workflow-slug": "",
         "x-feature-slug": "",
       })
     );
@@ -101,7 +101,7 @@ describe("extractTrackingHeaders", () => {
       mockRequest({
         "x-campaign-id": "  camp-123  ",
         "x-brand-id": "  brand-456  ",
-        "x-workflow-name": "  my-workflow  ",
+        "x-workflow-slug": "  my-workflow  ",
         "x-feature-slug": "  press-outreach  ",
       })
     );
@@ -109,7 +109,7 @@ describe("extractTrackingHeaders", () => {
     expect(result).toEqual({
       campaignId: "camp-123",
       brandId: "brand-456",
-      workflowName: "my-workflow",
+      workflowSlug: "my-workflow",
       featureSlug: "press-outreach",
     });
   });
