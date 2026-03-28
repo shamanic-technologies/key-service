@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { extractTrackingHeaders } from "../lib/tracking-headers.js";
 
 /**
- * Extract optional workflow tracking headers (x-campaign-id, x-brand-id, x-workflow-name, x-feature-slug).
+ * Extract optional workflow tracking headers (x-campaign-id, x-brand-id, x-workflow-slug, x-feature-slug).
  * Sets req.tracking if any are present. Never rejects — all headers are optional.
  */
 export function captureTrackingHeaders(
