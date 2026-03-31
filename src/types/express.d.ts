@@ -6,7 +6,7 @@ declare namespace Express {
     };
     tracking?: {
       campaignId?: string;
-      brandId?: string;
+      brandIds?: string[];
       workflowSlug?: string;
       featureSlug?: string;
     } | null;

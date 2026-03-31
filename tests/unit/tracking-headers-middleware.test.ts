@@ -28,7 +28,7 @@ describe("captureTrackingHeaders middleware", () => {
     expect(res.status).toBe(200);
     expect(res.body.tracking).toEqual({
       campaignId: "camp-1",
-      brandId: "brand-1",
+      brandIds: ["brand-1"],
       workflowSlug: "wf-1",
       featureSlug: "press-outreach",
     });
@@ -54,5 +54,13 @@ describe("captureTrackingHeaders middleware", () => {
       .set({ "x-campaign-id": "", "x-brand-id": "", "x-workflow-slug": "", "x-feature-slug": "" });
     expect(res.status).toBe(200);
     expect(res.body.tracking).toBeNull();
+  });
+
+  it("should parse multi-brand CSV header", async () => {
+    const res = await request(app)
+      .get("/test")
+      .set({ "x-brand-id": "brand-1,brand-2,brand-3" });
+    expect(res.status).toBe(200);
+    expect(res.body.tracking).toEqual({ brandIds: ["brand-1", "brand-2", "brand-3"] });
   });
 });
