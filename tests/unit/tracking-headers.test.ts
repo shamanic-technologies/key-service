@@ -18,7 +18,7 @@ describe("extractTrackingHeaders", () => {
 
     expect(result).toEqual({
       campaignId: "camp-123",
-      brandId: "brand-456",
+      brandIds: ["brand-456"],
       workflowSlug: "lead-enrichment",
       featureSlug: "press-outreach",
     });
@@ -47,7 +47,7 @@ describe("extractTrackingHeaders", () => {
       })
     );
 
-    expect(result).toEqual({ brandId: "brand-456", workflowSlug: "my-workflow" });
+    expect(result).toEqual({ brandIds: ["brand-456"], workflowSlug: "my-workflow" });
   });
 
   it("should extract x-feature-slug alone", () => {
@@ -69,7 +69,7 @@ describe("extractTrackingHeaders", () => {
       })
     );
 
-    expect(result).toEqual({ brandId: "brand-456" });
+    expect(result).toEqual({ brandIds: ["brand-456"] });
   });
 
   it("should ignore whitespace-only headers", () => {
@@ -80,7 +80,7 @@ describe("extractTrackingHeaders", () => {
       })
     );
 
-    expect(result).toEqual({ brandId: "brand-456" });
+    expect(result).toEqual({ brandIds: ["brand-456"] });
   });
 
   it("should return null when all headers are empty", () => {
@@ -108,9 +108,39 @@ describe("extractTrackingHeaders", () => {
 
     expect(result).toEqual({
       campaignId: "camp-123",
-      brandId: "brand-456",
+      brandIds: ["brand-456"],
       workflowSlug: "my-workflow",
       featureSlug: "press-outreach",
     });
+  });
+
+  it("should parse comma-separated brand IDs", () => {
+    const result = extractTrackingHeaders(
+      mockRequest({
+        "x-brand-id": "brand-1,brand-2,brand-3",
+      })
+    );
+
+    expect(result).toEqual({ brandIds: ["brand-1", "brand-2", "brand-3"] });
+  });
+
+  it("should trim whitespace in CSV brand IDs", () => {
+    const result = extractTrackingHeaders(
+      mockRequest({
+        "x-brand-id": " brand-1 , brand-2 , brand-3 ",
+      })
+    );
+
+    expect(result).toEqual({ brandIds: ["brand-1", "brand-2", "brand-3"] });
+  });
+
+  it("should filter empty entries in CSV brand IDs", () => {
+    const result = extractTrackingHeaders(
+      mockRequest({
+        "x-brand-id": "brand-1,,brand-2,  ,brand-3",
+      })
+    );
+
+    expect(result).toEqual({ brandIds: ["brand-1", "brand-2", "brand-3"] });
   });
 });

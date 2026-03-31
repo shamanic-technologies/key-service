@@ -2,7 +2,7 @@ import { Request } from "express";
 
 export interface TrackingInfo {
   campaignId: string;
-  brandId: string;
+  brandIds: string[];
   workflowSlug: string;
   featureSlug: string;
 }
@@ -24,7 +24,10 @@ export function extractTrackingHeaders(req: Request): Partial<TrackingInfo> | nu
     result.campaignId = campaignId.trim();
   }
   if (typeof brandId === "string" && brandId.trim()) {
-    result.brandId = brandId.trim();
+    const parsed = brandId.split(",").map(s => s.trim()).filter(Boolean);
+    if (parsed.length > 0) {
+      result.brandIds = parsed;
+    }
   }
   if (typeof workflowSlug === "string" && workflowSlug.trim()) {
     result.workflowSlug = workflowSlug.trim();

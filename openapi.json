@@ -711,11 +711,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -806,11 +806,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -951,11 +951,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -1041,11 +1041,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -1154,11 +1154,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -1250,11 +1250,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -1343,11 +1343,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -1434,11 +1434,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -1547,11 +1547,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -1616,11 +1616,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -1695,11 +1695,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -1772,11 +1772,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -1841,11 +1841,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -1930,11 +1930,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -2073,11 +2073,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -2216,11 +2216,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -2327,11 +2327,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
@@ -2420,11 +2420,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand identifier (injected by workflow-service)",
-              "example": "brand-uuid-012"
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
             },
             "required": false,
-            "description": "Brand identifier (injected by workflow-service)",
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
             "name": "x-brand-id",
             "in": "header"
           },
