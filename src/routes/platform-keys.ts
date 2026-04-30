@@ -10,6 +10,7 @@ import { platformKeys, providers } from "../db/schema.js";
 import { encrypt, decrypt, maskKey } from "../lib/crypto.js";
 import { ensureProvider, getProviderByName } from "../lib/ensure-provider.js";
 import { CreatePlatformKeyRequestSchema } from "../schemas.js";
+import { traceEvent } from "../lib/trace-event.js";
 
 const router = Router();
 
@@ -78,6 +79,16 @@ router.post("/", async (req: Request, res: Response) => {
         encryptedKey,
       });
       console.log(`[key-service] Platform key created: provider="${providerName}"`);
+    }
+
+    const runId = req.headers["x-run-id"] as string | undefined;
+    if (runId) {
+      traceEvent(runId, {
+        service: "key-service",
+        event: "platform-key-saved",
+        detail: `Platform key ${existing ? "updated" : "created"} for provider=${providerName}`,
+        data: { provider: providerName, action: existing ? "update" : "create" },
+      }, req.headers).catch(() => {});
     }
 
     res.json({
