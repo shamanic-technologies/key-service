@@ -11,6 +11,7 @@ import { encrypt, decrypt, maskKey } from "../lib/crypto.js";
 import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
 import { ensureProvider, getProviderByName } from "../lib/ensure-provider.js";
+import { traceEvent } from "../lib/trace-event.js";
 import {
   CreateOrgKeyRequestSchema,
   SetKeySourceRequestSchema,
@@ -96,6 +97,16 @@ router.post("/", async (req: Request, res: Response) => {
         providerId,
         encryptedKey,
       });
+    }
+
+    const runId = req.headers["x-run-id"] as string | undefined;
+    if (runId) {
+      traceEvent(runId, {
+        service: "key-service",
+        event: "org-key-saved",
+        detail: `Org key ${existing ? "updated" : "created"} for provider=${providerName}`,
+        data: { provider: providerName, action: existing ? "update" : "create" },
+      }, req.headers).catch(() => {});
     }
 
     res.json({
@@ -198,6 +209,16 @@ router.put("/:provider/source", async (req: Request, res: Response) => {
       });
     }
 
+    const runId = req.headers["x-run-id"] as string | undefined;
+    if (runId) {
+      traceEvent(runId, {
+        service: "key-service",
+        event: "key-source-set",
+        detail: `Key source for ${providerName} set to ${keySource} — orgId=${orgId}`,
+        data: { provider: providerName, keySource, orgId },
+      }, req.headers).catch(() => {});
+    }
+
     res.json({
       provider: providerName,
       orgId,
@@ -271,6 +292,16 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
     }
 
     const keySource = await resolveKeySource(orgId, provider.id);
+
+    const runId = req.headers["x-run-id"] as string | undefined;
+    if (runId) {
+      traceEvent(runId, {
+        service: "key-service",
+        event: "decrypt-resolve",
+        detail: `Resolving ${providerName} key — source=${keySource}, orgId=${orgId}`,
+        data: { provider: providerName, keySource, orgId },
+      }, req.headers).catch(() => {});
+    }
 
     if (keySource === "org") {
       const key = await db.query.orgKeys.findFirst({

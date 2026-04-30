@@ -11,6 +11,7 @@ import { decrypt } from "../lib/crypto.js";
 import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
 import { getProviderByName } from "../lib/ensure-provider.js";
+import { traceEvent } from "../lib/trace-event.js";
 
 const router = Router();
 
@@ -45,6 +46,16 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
     }
 
     await recordProviderRequirement(caller, providerName);
+
+    const runId = req.headers["x-run-id"] as string | undefined;
+    if (runId) {
+      traceEvent(runId, {
+        service: "key-service",
+        event: "platform-decrypt",
+        detail: `Decrypted platform key for provider=${providerName}`,
+        data: { provider: providerName },
+      }, req.headers).catch(() => {});
+    }
 
     res.json({
       provider: providerName,
