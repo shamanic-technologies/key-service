@@ -7,11 +7,12 @@ import { Router, Request, Response } from "express";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { orgKeys, platformKeys, providers, orgProviderKeySources } from "../db/schema.js";
-import { encrypt, decrypt, maskKey } from "../lib/crypto.js";
+import { encrypt, decrypt } from "../lib/crypto.js";
 import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
 import { ensureProvider, getProviderByName } from "../lib/ensure-provider.js";
 import { traceEvent } from "../lib/trace-event.js";
+import { serializeSecret, deserializeSecret, maskValue } from "../lib/secret-codec.js";
 import {
   CreateOrgKeyRequestSchema,
   SetKeySourceRequestSchema,
@@ -51,7 +52,7 @@ router.get("/", async (req: Request, res: Response) => {
         });
         return {
           provider: provider?.name ?? "unknown",
-          maskedKey: maskKey(decrypt(key.encryptedKey)),
+          maskedKey: maskValue(deserializeSecret(decrypt(key.encryptedKey))),
           createdAt: key.createdAt,
           updatedAt: key.updatedAt,
         };
@@ -79,7 +80,7 @@ router.post("/", async (req: Request, res: Response) => {
     const { orgId } = req.identity!;
     const { provider: providerName, apiKey } = parsed.data;
     const providerId = await ensureProvider(providerName);
-    const encryptedKey = encrypt(apiKey);
+    const encryptedKey = encrypt(serializeSecret(apiKey));
 
     // Upsert
     const existing = await db.query.orgKeys.findFirst({
@@ -111,7 +112,7 @@ router.post("/", async (req: Request, res: Response) => {
 
     res.json({
       provider: providerName,
-      maskedKey: maskKey(apiKey),
+      maskedKey: maskValue(apiKey),
       message: `${providerName} key saved successfully`,
     });
   } catch (error) {
@@ -312,7 +313,7 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
         return res.status(404).json({ error: `Key not found: no '${providerName}' org key configured for org '${orgId}'` });
       }
       await recordProviderRequirement(caller, providerName);
-      return res.json({ provider: providerName, key: decrypt(key.encryptedKey), keySource: "org", userId });
+      return res.json({ provider: providerName, key: deserializeSecret(decrypt(key.encryptedKey)), keySource: "org", userId });
     }
 
     // platform
@@ -324,7 +325,7 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
       return res.status(404).json({ error: `Key not found: no '${providerName}' platform key configured` });
     }
     await recordProviderRequirement(caller, providerName);
-    return res.json({ provider: providerName, key: decrypt(key.encryptedKey), keySource: "platform", userId });
+    return res.json({ provider: providerName, key: deserializeSecret(decrypt(key.encryptedKey)), keySource: "platform", userId });
   } catch (error) {
     console.error("Decrypt key error:", error);
     res.status(500).json({ error: "Internal server error" });

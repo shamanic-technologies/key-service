@@ -6,9 +6,26 @@ API key and BYOK (Bring Your Own Key) management microservice. Handles authentic
 
 - **API Key Management**: Generate, validate, and revoke API keys for client authentication
 - **BYOK Key Storage**: Securely store and retrieve external API keys (Apollo, Anthropic, etc.)
+- **Multi-credential providers**: `featured` (Featured.com Premium) stores `{username, password}` as a single encrypted JSON blob
 - **AES-256-GCM Encryption**: All sensitive keys encrypted at rest
 - **Auto-migrations**: Database schema automatically applied on startup
 - **Service-to-Service Auth**: Internal routes protected by KEY_SERVICE_API_KEY
+
+## Provider value shapes
+
+Most providers store a single string secret. The `apiKey` request field also accepts an
+object for providers that need multi-field credentials:
+
+```jsonc
+// Single-string providers (anthropic, openai, gemini, …)
+{ "provider": "anthropic", "apiKey": "sk-ant-..." }
+
+// featured — Featured.com Premium API uses basic auth
+{ "provider": "featured", "apiKey": { "username": "press@x.com", "password": "..." } }
+```
+
+Decrypt endpoints return the value in the original shape — string for string providers,
+object for `featured`.
 
 ## Tech Stack
 

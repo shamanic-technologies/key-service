@@ -3,9 +3,30 @@ import {
   OpenAPIRegistry,
   extendZodWithOpenApi,
 } from "@asteasolutions/zod-to-openapi";
+import { FeaturedCredentialsSchema } from "./lib/secret-codec.js";
 
 extendZodWithOpenApi(z);
 export const registry = new OpenAPIRegistry();
+
+// ==================== Secret value shape ====================
+
+/**
+ * A provider secret value. Most providers use a single string token; `featured`
+ * uses `{username, password}` because Featured.com Premium API requires basic auth.
+ */
+const FeaturedCredentialsOpenApiSchema = z
+  .object({
+    username: FeaturedCredentialsSchema.shape.username,
+    password: FeaturedCredentialsSchema.shape.password,
+  })
+  .openapi("FeaturedCredentials");
+
+const SecretValueOpenApiSchema = z
+  .union([z.string().min(1), FeaturedCredentialsOpenApiSchema])
+  .openapi("SecretValue", {
+    description:
+      "Provider secret. String for typical providers (e.g. anthropic, openai). For `featured` (Featured.com Premium), pass `{username, password}`.",
+  });
 
 // ==================== Shared ====================
 
@@ -72,7 +93,7 @@ const ValidateKeyQuerySchema = z
 const ValidateKeyResponseSchema = z
   .object({
     provider: z.string(),
-    key: z.string(),
+    key: SecretValueOpenApiSchema,
   })
   .openapi("ValidateKeyResponse");
 
@@ -298,7 +319,7 @@ registry.registerPath({
 export const CreateOrgKeyRequestSchema = z
   .object({
     provider: z.string().min(1),
-    apiKey: z.string().min(1),
+    apiKey: SecretValueOpenApiSchema,
   })
   .openapi("CreateOrgKeyRequest");
 
@@ -369,7 +390,7 @@ registry.registerPath({
 export const CreatePlatformKeyRequestSchema = z
   .object({
     provider: z.string().min(1),
-    apiKey: z.string().min(1),
+    apiKey: SecretValueOpenApiSchema,
   })
   .openapi("CreatePlatformKeyRequest");
 
@@ -541,7 +562,7 @@ registry.registerComponent("securitySchemes", "serviceKeyAuth", {
 const DecryptPlatformKeyDirectResponseSchema = z
   .object({
     provider: z.string(),
-    key: z.string(),
+    key: SecretValueOpenApiSchema,
   })
   .openapi("DecryptPlatformKeyDirectResponse");
 
@@ -574,7 +595,7 @@ registry.registerPath({
 const DecryptKeyResponseSchema = z
   .object({
     provider: z.string(),
-    key: z.string(),
+    key: SecretValueOpenApiSchema,
     keySource: z.enum(["org", "platform"]),
     userId: z.string(),
   })

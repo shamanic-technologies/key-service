@@ -82,12 +82,41 @@
             "type": "string"
           },
           "key": {
-            "type": "string"
+            "$ref": "#/components/schemas/SecretValue"
           }
         },
         "required": [
           "provider",
           "key"
+        ]
+      },
+      "SecretValue": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "$ref": "#/components/schemas/FeaturedCredentials"
+          }
+        ],
+        "description": "Provider secret. String for typical providers (e.g. anthropic, openai). For `featured` (Featured.com Premium), pass `{username, password}`."
+      },
+      "FeaturedCredentials": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "username",
+          "password"
         ]
       },
       "ListUserAuthKeysResponse": {
@@ -313,8 +342,7 @@
             "minLength": 1
           },
           "apiKey": {
-            "type": "string",
-            "minLength": 1
+            "$ref": "#/components/schemas/SecretValue"
           }
         },
         "required": [
@@ -364,8 +392,7 @@
             "minLength": 1
           },
           "apiKey": {
-            "type": "string",
-            "minLength": 1
+            "$ref": "#/components/schemas/SecretValue"
           }
         },
         "required": [
@@ -517,7 +544,7 @@
             "type": "string"
           },
           "key": {
-            "type": "string"
+            "$ref": "#/components/schemas/SecretValue"
           }
         },
         "required": [
@@ -532,7 +559,7 @@
             "type": "string"
           },
           "key": {
-            "type": "string"
+            "$ref": "#/components/schemas/SecretValue"
           },
           "keySource": {
             "type": "string",
