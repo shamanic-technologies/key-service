@@ -14,6 +14,7 @@ import apiKeysRoutes from "./routes/api-keys.js";
 import platformKeysRoutes from "./routes/platform-keys.js";
 import platformDecryptRoutes from "./routes/platform-decrypt.js";
 import providerRequirementsRoutes from "./routes/provider-requirements.js";
+import internalKeysRoutes from "./routes/internal-keys.js";
 import { serviceKeyAuth, requireIdentityHeaders, captureTrackingHeaders } from "./middleware/auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -56,6 +57,9 @@ app.use("/platform-keys", serviceKeyAuth, platformKeysRoutes);
 
 // Provider requirements — no identity headers needed
 app.use("/provider-requirements", serviceKeyAuth, providerRequirementsRoutes);
+
+// Internal org teardown — internal org UUID is carried in the path
+app.use("/internal/keys", serviceKeyAuth, internalKeysRoutes);
 
 // 404
 app.use((req, res) => {
