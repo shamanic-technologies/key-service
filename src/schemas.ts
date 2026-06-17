@@ -364,6 +364,46 @@ registry.registerPath({
   },
 });
 
+// ==================== Internal Org Teardown (/internal/keys) ====================
+
+const DeleteOrgCredentialMaterialResponseSchema = z
+  .object({
+    orgId: z.string().uuid(),
+    deleted: z.object({
+      orgKeys: z.number().int().nonnegative(),
+      keySources: z.number().int().nonnegative(),
+      apiKeys: z.number().int().nonnegative(),
+    }),
+    message: z.string(),
+  })
+  .openapi("DeleteOrgCredentialMaterialResponse");
+
+registry.registerPath({
+  method: "delete",
+  path: "/internal/keys/by-org/{orgId}",
+  summary: "Delete all key-service-owned org credential material",
+  description:
+    "Internal cascade-teardown endpoint. Deletes org-owned provider keys, provider key-source preferences, and user API/auth keys for the internal org UUID. Platform keys and global provider metadata are not touched. Idempotent: no rows for the org is still success.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    headers: TrackingHeadersSchema,
+    params: z.object({
+      orgId: z.string().uuid().openapi({ description: "Internal org UUID from client-service" }),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Org credential material deleted",
+      content: {
+        "application/json": { schema: DeleteOrgCredentialMaterialResponseSchema },
+      },
+    },
+    400: { description: "Invalid orgId" },
+    401: { description: "Unauthorized" },
+    500: { description: "Database or invariant failure" },
+  },
+});
+
 // ==================== Platform Keys (/platform-keys) ====================
 
 export const CreatePlatformKeyRequestSchema = z

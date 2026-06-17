@@ -337,6 +337,45 @@
           "message"
         ]
       },
+      "DeleteOrgCredentialMaterialResponse": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted": {
+            "type": "object",
+            "properties": {
+              "orgKeys": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "keySources": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "apiKeys": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "orgKeys",
+              "keySources",
+              "apiKeys"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orgId",
+          "deleted",
+          "message"
+        ]
+      },
       "CreatePlatformKeyResponse": {
         "type": "object",
         "properties": {
@@ -1588,6 +1627,95 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/internal/keys/by-org/{orgId}": {
+      "delete": {
+        "summary": "Delete all key-service-owned org credential material",
+        "description": "Internal cascade-teardown endpoint. Deletes org-owned provider keys, provider key-source preferences, and user API/auth keys for the internal org UUID. Platform keys and global provider metadata are not touched. Idempotent: no rows for the org is still success.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Internal org UUID from client-service"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
+            },
+            "required": false,
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow slug (injected by workflow-service)",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Org credential material deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteOrgCredentialMaterialResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid orgId"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Database or invariant failure"
           }
         }
       }
