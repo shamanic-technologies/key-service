@@ -24,6 +24,7 @@ describe("captureTrackingHeaders middleware", () => {
         "x-brand-id": "brand-1",
         "x-workflow-slug": "wf-1",
         "x-feature-slug": "press-outreach",
+        "x-audience-id": "audience-xyz",
       });
     expect(res.status).toBe(200);
     expect(res.body.tracking).toEqual({
@@ -31,6 +32,7 @@ describe("captureTrackingHeaders middleware", () => {
       brandIds: ["brand-1"],
       workflowSlug: "wf-1",
       featureSlug: "press-outreach",
+      audienceId: "audience-xyz",
     });
   });
 

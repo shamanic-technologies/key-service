@@ -23,6 +23,7 @@ describe("traceEvent", () => {
       "x-campaign-id": "camp-abc",
       "x-workflow-slug": "my-workflow",
       "x-feature-slug": "my-feature",
+      "x-audience-id": "audience-xyz",
     };
 
     await traceEvent("run-001", {
@@ -53,6 +54,7 @@ describe("traceEvent", () => {
       "x-campaign-id": "camp-abc",
       "x-workflow-slug": "my-workflow",
       "x-feature-slug": "my-feature",
+      "x-audience-id": "audience-xyz",
     });
   });
 
@@ -114,5 +116,16 @@ describe("traceEvent", () => {
     expect(opts.headers).not.toHaveProperty("x-campaign-id");
     expect(opts.headers).not.toHaveProperty("x-workflow-slug");
     expect(opts.headers).not.toHaveProperty("x-feature-slug");
+    expect(opts.headers).not.toHaveProperty("x-audience-id");
+  });
+
+  it("forwards x-audience-id inbound header to runs-service egress (cost-attribution regression)", async () => {
+    await traceEvent("run-001", {
+      service: "key-service",
+      event: "test",
+    }, { "x-audience-id": "audience-xyz" });
+
+    const [, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(opts.headers).toHaveProperty("x-audience-id", "audience-xyz");
   });
 });
