@@ -5,6 +5,7 @@ export interface TrackingInfo {
   brandIds: string[];
   workflowSlug: string;
   featureSlug: string;
+  audienceId: string;
 }
 
 /**
@@ -17,6 +18,7 @@ export function extractTrackingHeaders(req: Request): Partial<TrackingInfo> | nu
   const brandId = req.headers["x-brand-id"];
   const workflowSlug = req.headers["x-workflow-slug"];
   const featureSlug = req.headers["x-feature-slug"];
+  const audienceId = req.headers["x-audience-id"];
 
   const result: Partial<TrackingInfo> = {};
 
@@ -34,6 +36,9 @@ export function extractTrackingHeaders(req: Request): Partial<TrackingInfo> | nu
   }
   if (typeof featureSlug === "string" && featureSlug.trim()) {
     result.featureSlug = featureSlug.trim();
+  }
+  if (typeof audienceId === "string" && audienceId.trim()) {
+    result.audienceId = audienceId.trim();
   }
 
   return Object.keys(result).length > 0 ? result : null;
