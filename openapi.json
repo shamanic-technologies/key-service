@@ -779,6 +779,17 @@
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -873,6 +884,17 @@
             "required": false,
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
             "in": "header"
           },
           {
@@ -1019,6 +1041,17 @@
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1108,6 +1141,17 @@
             "required": false,
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
             "in": "header"
           }
         ],
@@ -1222,6 +1266,17 @@
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1318,6 +1373,17 @@
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1411,6 +1477,17 @@
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1501,6 +1578,17 @@
             "required": false,
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
             "in": "header"
           }
         ],
@@ -1615,6 +1703,17 @@
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1695,6 +1794,17 @@
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1772,6 +1882,17 @@
             "required": false,
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
             "in": "header"
           }
         ],
@@ -1852,6 +1973,17 @@
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1929,6 +2061,17 @@
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1997,6 +2140,17 @@
             "required": false,
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
             "in": "header"
           }
         ],
@@ -2086,6 +2240,17 @@
             "required": false,
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
             "in": "header"
           },
           {
@@ -2234,6 +2399,17 @@
           {
             "schema": {
               "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
               "minLength": 1,
               "description": "Name of the calling service",
               "example": "apollo"
@@ -2373,6 +2549,17 @@
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
           }
         ],
         "requestBody": {
@@ -2484,6 +2671,17 @@
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
             "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -2576,6 +2774,17 @@
             "required": false,
             "description": "Feature slug for tracking (injected by workflow-service)",
             "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
             "in": "header"
           }
         ],

@@ -13,6 +13,7 @@ describe("extractTrackingHeaders", () => {
         "x-brand-id": "brand-456",
         "x-workflow-slug": "lead-enrichment",
         "x-feature-slug": "press-outreach",
+        "x-audience-id": "audience-xyz",
       })
     );
 
@@ -21,7 +22,18 @@ describe("extractTrackingHeaders", () => {
       brandIds: ["brand-456"],
       workflowSlug: "lead-enrichment",
       featureSlug: "press-outreach",
+      audienceId: "audience-xyz",
     });
+  });
+
+  it("should extract x-audience-id alone", () => {
+    const result = extractTrackingHeaders(
+      mockRequest({
+        "x-audience-id": "audience-xyz",
+      })
+    );
+
+    expect(result).toEqual({ audienceId: "audience-xyz" });
   });
 
   it("should return null when no tracking headers present", () => {
@@ -103,6 +115,7 @@ describe("extractTrackingHeaders", () => {
         "x-brand-id": "  brand-456  ",
         "x-workflow-slug": "  my-workflow  ",
         "x-feature-slug": "  press-outreach  ",
+        "x-audience-id": "  audience-xyz  ",
       })
     );
 
@@ -111,6 +124,7 @@ describe("extractTrackingHeaders", () => {
       brandIds: ["brand-456"],
       workflowSlug: "my-workflow",
       featureSlug: "press-outreach",
+      audienceId: "audience-xyz",
     });
   });
 
