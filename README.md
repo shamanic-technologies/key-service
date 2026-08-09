@@ -63,6 +63,16 @@ pnpm db:migrate
 pnpm db:studio
 ```
 
+## Tests in CI
+
+`.github/workflows/test.yml` runs the suite against a `postgres:16` service
+container started for that run and destroyed with the job — never a shared,
+staging or production database. The container starts empty; the schema under
+test is built from `src/db/schema.ts` via `drizzle-kit push`, and the migration
+journal is separately replayed from nothing into a second database so a
+migration that only works against an already-populated one fails in CI rather
+than in the boot migrator.
+
 ## API Endpoints
 
 ### Health (Public)
