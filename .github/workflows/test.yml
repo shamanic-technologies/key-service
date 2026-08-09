@@ -10,6 +10,39 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    # A throwaway Postgres, one per run, inside the runner.
+    #
+    # This used to be a branch cut per run on the managed database provider the
+    # fleet has since left for a self-hosted Postgres. That project no longer
+    # exists, so the create-branch step failed with a 404 before a single test
+    # could run and nothing could merge. A service container keeps the property
+    # that branch was there for — a database nothing else points at, discarded
+    # when the job ends — with no external service, no API key, and no delete
+    # step that can leave anything behind.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: key_service_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # `sslmode=disable`: the container serves plaintext. postgres.js reads the
+      # parameter off the connection string, so it belongs here rather than in
+      # src/db/index.ts, which stays as production wants it.
+      KEY_SERVICE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/key_service_test?sslmode=disable
+      # A fixed 32-byte test key. Not a secret: it encrypts nothing but fixtures,
+      # and CI must not depend on a stored credential to run the suite.
+      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+
     steps:
       - uses: actions/checkout@v4
 
@@ -28,29 +61,42 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Create Neon branch
-        id: neon
-        uses: neondatabase/create-branch-action@v5
-        with:
-          project_id: ${{ secrets.NEON_PROJECT_ID }}
-          branch_name: test-${{ github.run_id }}
-          api_key: ${{ secrets.NEON_API_KEY }}
+      # The database starts EMPTY, so the schema is built from `schema.ts`.
+      #
+      # `drizzle-kit push` prints a failed statement and EXITS 0, abandoning
+      # every statement after it — against an empty database that means serving
+      # the suite a half-built schema and failing somewhere unrelated. Verified
+      # against this repo's drizzle-kit: a failing ALTER prints
+      # `PostgresError: ...` / `severity: 'ERROR'` and still returns 0. Fail the
+      # job on any error it prints.
+      - name: Push schema to database
+        run: |
+          set -o pipefail
+          pnpm exec drizzle-kit push --force 2>&1 | tee /tmp/drizzle-push.log
+          if grep -qE "^error:|^[A-Za-z]*Error:|severity: 'ERROR'" /tmp/drizzle-push.log; then
+            echo "::error::drizzle-kit push reported an error (and exited 0) — the schema is incomplete."
+            exit 1
+          fi
 
-      - name: Run migrations
-        run: pnpm drizzle-kit push
-        env:
-          KEY_SERVICE_DATABASE_URL: ${{ steps.neon.outputs.db_url }}
+      # The migration journal is what the boot migrator replays on a fresh
+      # environment (src/index.ts calls migrate() before listen), so CI exercises
+      # it too — on its own database, from nothing, so a migration that only
+      # works against an already-populated database fails here rather than at
+      # boot. It replays into the container's built-in `postgres` database, which
+      # is empty (POSTGRES_DB created `key_service_test` beside it) — so no
+      # client tooling is needed to make one, and the suite keeps its own
+      # schema.ts-built database, which stays the authority on drift.
+      - name: Replay migration journal from an empty database
+        run: |
+          set -o pipefail
+          KEY_SERVICE_DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable' \
+            pnpm exec drizzle-kit migrate 2>&1 | tee /tmp/drizzle-migrate.log
+          if grep -qE "^error:|^[A-Za-z]*Error:|severity: 'ERROR'" /tmp/drizzle-migrate.log; then
+            echo "::error::the migration journal cannot build a database from nothing."
+            exit 1
+          fi
 
       - name: Run tests
         run: pnpm test
-        env:
-          KEY_SERVICE_DATABASE_URL: ${{ steps.neon.outputs.db_url }}
-          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
 
-      - name: Delete Neon branch
-        if: always()
-        uses: neondatabase/delete-branch-action@v3
-        with:
-          project_id: ${{ secrets.NEON_PROJECT_ID }}
-          branch: test-${{ github.run_id }}
-          api_key: ${{ secrets.NEON_API_KEY }}
+      # No cleanup step: the service container dies with the job.
