@@ -27,3 +27,21 @@ API key and BYOK (Bring Your Own Key) management microservice. Handles key gener
 - `src/index.ts` — Express app setup and server entry point
 - `tests/` — Test files (`*.test.ts`)
 - `openapi.json` — Auto-generated from Zod schemas, do NOT edit manually
+
+## CI
+
+Tests run against a `postgres:16` service container started for that run and
+destroyed with the job (`.github/workflows/test.yml`) — never a shared, staging
+or production database. Two invariants:
+
+- **The database starts EMPTY.** The schema under test is built from
+  `src/db/schema.ts` by `drizzle-kit push`, so any statement that only works
+  against an already-populated database fails here. The migration journal is
+  separately replayed from nothing into a second database, because
+  `src/index.ts` migrates before `listen()` on a fresh environment.
+- **`drizzle-kit push` exits 0 on a failed statement.** It prints the error,
+  abandons every statement after it, and returns success — which on an empty
+  database means serving the suite a half-built schema. The push step greps its
+  own output and fails the job on any error. This repo's drizzle-kit prints
+  `PostgresError:` / `severity: 'ERROR'`, not `error:` — verify the pattern
+  against real output before changing it.
