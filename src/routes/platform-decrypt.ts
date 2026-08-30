@@ -12,6 +12,7 @@ import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
 import { getProviderByName } from "../lib/ensure-provider.js";
 import { traceEvent } from "../lib/trace-event.js";
+import { deserializeSecret } from "../lib/secret-codec.js";
 
 const router = Router();
 
@@ -59,7 +60,7 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
 
     res.json({
       provider: providerName,
-      key: decrypt(key.encryptedKey),
+      key: deserializeSecret(decrypt(key.encryptedKey)),
     });
   } catch (error) {
     console.error("Decrypt platform key error:", error);

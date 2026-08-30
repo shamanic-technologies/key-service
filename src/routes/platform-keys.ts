@@ -7,10 +7,11 @@ import { Router, Request, Response } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { platformKeys, providers } from "../db/schema.js";
-import { encrypt, decrypt, maskKey } from "../lib/crypto.js";
+import { encrypt, decrypt } from "../lib/crypto.js";
 import { ensureProvider, getProviderByName } from "../lib/ensure-provider.js";
 import { CreatePlatformKeyRequestSchema } from "../schemas.js";
 import { traceEvent } from "../lib/trace-event.js";
+import { serializeSecret, deserializeSecret, maskValue } from "../lib/secret-codec.js";
 
 const router = Router();
 
@@ -29,7 +30,7 @@ router.get("/", async (req: Request, res: Response) => {
         });
         return {
           provider: provider?.name ?? "unknown",
-          maskedKey: maskKey(decrypt(key.encryptedKey)),
+          maskedKey: maskValue(deserializeSecret(decrypt(key.encryptedKey))),
           createdAt: key.createdAt,
           updatedAt: key.updatedAt,
         };
@@ -57,7 +58,8 @@ router.post("/", async (req: Request, res: Response) => {
 
     const { provider: providerName, apiKey } = parsed.data;
     const providerId = await ensureProvider(providerName);
-    const encryptedKey = encrypt(apiKey);
+    const serialized = serializeSecret(apiKey);
+    const encryptedKey = encrypt(serialized);
 
     // Upsert — only write if the value actually changed
     const existing = await db.query.platformKeys.findFirst({
@@ -66,7 +68,7 @@ router.post("/", async (req: Request, res: Response) => {
 
     if (existing) {
       const existingKey = decrypt(existing.encryptedKey);
-      if (existingKey !== apiKey) {
+      if (existingKey !== serialized) {
         await db
           .update(platformKeys)
           .set({ encryptedKey, updatedAt: new Date() })
@@ -93,7 +95,7 @@ router.post("/", async (req: Request, res: Response) => {
 
     res.json({
       provider: providerName,
-      maskedKey: maskKey(apiKey),
+      maskedKey: maskValue(apiKey),
       message: `${providerName} platform key saved successfully`,
     });
   } catch (error) {

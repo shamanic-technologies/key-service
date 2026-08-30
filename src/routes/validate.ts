@@ -6,6 +6,7 @@ import { hashApiKey, hasValidPrefix } from "../lib/api-key.js";
 import { decrypt } from "../lib/crypto.js";
 import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
+import { deserializeSecret } from "../lib/secret-codec.js";
 
 const router = Router();
 
@@ -131,7 +132,7 @@ router.get("/validate/keys/:provider", async (req: Request, res: Response) => {
 
     res.json({
       provider: providerName,
-      key: decrypt(orgKey.encryptedKey),
+      key: deserializeSecret(decrypt(orgKey.encryptedKey)),
     });
   } catch (error) {
     console.error("Get org key error:", error);
