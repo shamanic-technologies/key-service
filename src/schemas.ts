@@ -365,6 +365,149 @@ registry.registerPath({
   },
 });
 
+// ==================== Brand Keys (/keys/brands) ====================
+
+const BrandIdParamSchema = z.string().min(1).openapi({
+  description: "Brand identifier. Scopes the credential to one brand of the caller's org.",
+  example: "brand-uuid-012",
+});
+
+const BrandKeyItemSchema = z
+  .object({
+    provider: z.string(),
+    maskedKey: z.string(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+  })
+  .openapi("BrandKeyItem");
+
+const ListBrandKeysResponseSchema = z
+  .object({
+    brandId: z.string(),
+    keys: z.array(BrandKeyItemSchema),
+  })
+  .openapi("ListBrandKeysResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/keys/brands/{brandId}",
+  summary: "List a brand's third-party keys",
+  description:
+    "Masked only. Scoped to orgId from the identity header (x-org-id) and the brandId in the path. Org-wide keys are a separate grain and are not listed here.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema),
+    params: z.object({ brandId: BrandIdParamSchema }),
+  },
+  responses: {
+    200: {
+      description: "List of the brand's keys",
+      content: { "application/json": { schema: ListBrandKeysResponseSchema } },
+    },
+  },
+});
+
+export const CreateBrandKeyRequestSchema = z
+  .object({
+    provider: z.string().min(1),
+    apiKey: z.string().min(1),
+  })
+  .openapi("CreateBrandKeyRequest");
+
+const CreateBrandKeyResponseSchema = z
+  .object({
+    brandId: z.string(),
+    provider: z.string(),
+    maskedKey: z.string(),
+    message: z.string(),
+  })
+  .openapi("CreateBrandKeyResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/keys/brands/{brandId}",
+  summary: "Add or update a brand's third-party key",
+  description:
+    "Upsert keyed on (orgId, brandId, provider). Two brands of the same org can hold different credentials for the same provider; storing one never overwrites the other, nor the org-wide key.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema),
+    params: z.object({ brandId: BrandIdParamSchema }),
+    body: {
+      content: { "application/json": { schema: CreateBrandKeyRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Brand key saved",
+      content: { "application/json": { schema: CreateBrandKeyResponseSchema } },
+    },
+    400: { description: "Invalid request" },
+  },
+});
+
+const DecryptBrandKeyResponseSchema = z
+  .object({
+    brandId: z.string(),
+    provider: z.string(),
+    key: z.string(),
+    keySource: z.literal("brand"),
+    userId: z.string(),
+  })
+  .openapi("DecryptBrandKeyResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/keys/brands/{brandId}/{provider}/decrypt",
+  summary: "Resolve a brand's decrypted third-party key",
+  description:
+    "Service-to-service only. Returns the credential stored for this exact (orgId, brandId, provider). There is no fallback: if the brand has no key for the provider the answer is 404 — never the org-wide key, never another brand's.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema).extend({
+      "x-caller-service": z.string().min(1).openapi({ description: "Name of the calling service", example: "crm" }),
+      "x-caller-method": z.string().min(1).openapi({ description: "HTTP method of the caller's endpoint", example: "POST" }),
+      "x-caller-path": z.string().min(1).openapi({ description: "Path of the caller's endpoint", example: "/orgs/crm/contacts" }),
+    }),
+    params: z.object({ brandId: BrandIdParamSchema, provider: z.string() }),
+  },
+  responses: {
+    200: {
+      description: "Decrypted brand key",
+      content: { "application/json": { schema: DecryptBrandKeyResponseSchema } },
+    },
+    400: { description: "Missing caller headers" },
+    404: { description: "No key stored for this brand and provider" },
+  },
+});
+
+const DeleteBrandKeyResponseSchema = z
+  .object({
+    brandId: z.string(),
+    provider: z.string(),
+    message: z.string(),
+  })
+  .openapi("DeleteBrandKeyResponse");
+
+registry.registerPath({
+  method: "delete",
+  path: "/keys/brands/{brandId}/{provider}",
+  summary: "Delete a brand's third-party key",
+  description:
+    "Deletes only this (orgId, brandId, provider) row. Other brands of the org and the org-wide key are untouched.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    headers: IdentityHeadersSchema.merge(TrackingHeadersSchema),
+    params: z.object({ brandId: BrandIdParamSchema, provider: z.string() }),
+  },
+  responses: {
+    200: {
+      description: "Brand key deleted",
+      content: { "application/json": { schema: DeleteBrandKeyResponseSchema } },
+    },
+  },
+});
+
 // ==================== Internal Org Teardown (/internal/keys) ====================
 
 const DeleteOrgCredentialMaterialResponseSchema = z

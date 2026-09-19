@@ -51,6 +51,36 @@ export const orgKeys = pgTable(
   ]
 );
 
+// Brand keys — encrypted third-party API keys stored per org+brand+provider.
+//
+// A separate table from org_keys rather than a nullable brand_id column on it:
+// org_keys' unique index is (org_id, provider_id), and widening it to include a
+// nullable brand_id would change the collision rule every existing org-grain
+// caller already relies on. Two brands of the same org can hold different
+// credentials for the same provider here; the org-grain row keeps meaning
+// exactly what it means today, and neither grain reads the other.
+export const brandKeys = pgTable(
+  "brand_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull(),
+    brandId: text("brand_id").notNull(),
+    providerId: uuid("provider_id")
+      .notNull()
+      .references(() => providers.id, { onDelete: "cascade" }),
+    encryptedKey: text("encrypted_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_brand_keys_org_brand_provider").on(
+      table.orgId,
+      table.brandId,
+      table.providerId
+    ),
+  ]
+);
+
 // Platform keys — encrypted third-party API keys for the platform (global, one per provider)
 export const platformKeys = pgTable(
   "platform_keys",
@@ -115,6 +145,8 @@ export type UserAuthKey = typeof userAuthKeys.$inferSelect;
 export type NewUserAuthKey = typeof userAuthKeys.$inferInsert;
 export type OrgKey = typeof orgKeys.$inferSelect;
 export type NewOrgKey = typeof orgKeys.$inferInsert;
+export type BrandKey = typeof brandKeys.$inferSelect;
+export type NewBrandKey = typeof brandKeys.$inferInsert;
 export type PlatformKey = typeof platformKeys.$inferSelect;
 export type NewPlatformKey = typeof platformKeys.$inferInsert;
 export type OrgProviderKeySource = typeof orgProviderKeySources.$inferSelect;

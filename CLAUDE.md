@@ -18,6 +18,7 @@ API key and BYOK (Bring Your Own Key) management microservice. Handles key gener
 - `src/routes/health.ts` — Health check endpoint (public)
 - `src/routes/validate.ts` — API key validation + BYOK key retrieval (bearer auth)
 - `src/routes/internal.ts` — Internal CRUD for API keys and BYOK keys (service key auth)
+- `src/routes/brand-keys.ts` — Brand-scoped third-party credentials (`/keys/brands/*`). A second GRAIN beside the org-wide keys in `routes/keys.ts`, for an agency org whose brands are separate end clients with their own sub-account at the same provider. Mounted BEFORE `/keys` in `src/index.ts` so the org-grain `/:provider` routes are reached exactly as before. The two grains never read each other: a brand credential that is not stored is a 404, never the org-wide one and never another brand's.
 - `src/middleware/auth.ts` — Auth middleware (bearer token + service key)
 - `src/lib/crypto.ts` — AES-256-GCM encryption/decryption
 - `src/lib/api-key.ts` — API key generation and hashing
