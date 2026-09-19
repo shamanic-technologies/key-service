@@ -1,5 +1,5 @@
 import { db, sql } from "../../src/db/index.js";
-import { userAuthKeys, orgKeys, platformKeys, providers, orgProviderKeySources, providerRequirements } from "../../src/db/schema.js";
+import { userAuthKeys, orgKeys, brandKeys, platformKeys, providers, orgProviderKeySources, providerRequirements } from "../../src/db/schema.js";
 
 /**
  * Clean all test data from the database
@@ -8,6 +8,7 @@ export async function cleanTestData() {
   await db.delete(userAuthKeys);
   await db.delete(orgProviderKeySources);
   await db.delete(orgKeys);
+  await db.delete(brandKeys);
   await db.delete(platformKeys);
   await db.delete(providerRequirements);
   await db.delete(providers);
@@ -66,6 +67,25 @@ export async function insertTestOrgKey(
     .insert(orgKeys)
     .values({
       orgId: data.orgId || `test-org-${Date.now()}`,
+      providerId,
+      encryptedKey: data.encryptedKey || `encrypted-${Date.now()}`,
+    })
+    .returning();
+  return key;
+}
+
+/**
+ * Insert a test brand key
+ */
+export async function insertTestBrandKey(
+  providerId: string,
+  data: { orgId?: string; brandId?: string; encryptedKey?: string } = {}
+) {
+  const [key] = await db
+    .insert(brandKeys)
+    .values({
+      orgId: data.orgId || `test-org-${Date.now()}`,
+      brandId: data.brandId || `test-brand-${Date.now()}`,
       providerId,
       encryptedKey: data.encryptedKey || `encrypted-${Date.now()}`,
     })

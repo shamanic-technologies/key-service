@@ -10,6 +10,7 @@ import { db } from "./db/index.js";
 import healthRoutes from "./routes/health.js";
 import validateRoutes from "./routes/validate.js";
 import keysRoutes from "./routes/keys.js";
+import brandKeysRoutes from "./routes/brand-keys.js";
 import apiKeysRoutes from "./routes/api-keys.js";
 import platformKeysRoutes from "./routes/platform-keys.js";
 import platformDecryptRoutes from "./routes/platform-decrypt.js";
@@ -45,6 +46,10 @@ app.use(serviceKeyAuth, validateRoutes);
 
 // Platform key decrypt — no identity headers needed (platform keys are global)
 app.use("/keys/platform", serviceKeyAuth, platformDecryptRoutes);
+
+// Brand-scoped keys — mounted before /keys so the brand grain owns /keys/brands/*
+// and the org-grain :provider routes below are reached exactly as they are today.
+app.use("/keys/brands", serviceKeyAuth, requireIdentityHeaders, brandKeysRoutes);
 
 // Key management endpoints (resolve, preferences, org key CRUD)
 app.use("/keys", serviceKeyAuth, requireIdentityHeaders, keysRoutes);

@@ -337,6 +337,140 @@
           "message"
         ]
       },
+      "ListBrandKeysResponse": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandKeyItem"
+            }
+          }
+        },
+        "required": [
+          "brandId",
+          "keys"
+        ]
+      },
+      "BrandKeyItem": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "maskedKey": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "provider",
+          "maskedKey",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateBrandKeyResponse": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "maskedKey": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "brandId",
+          "provider",
+          "maskedKey",
+          "message"
+        ]
+      },
+      "CreateBrandKeyRequest": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "apiKey": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "provider",
+          "apiKey"
+        ]
+      },
+      "DecryptBrandKeyResponse": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "keySource": {
+            "type": "string",
+            "enum": [
+              "brand"
+            ]
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "brandId",
+          "provider",
+          "key",
+          "keySource",
+          "userId"
+        ]
+      },
+      "DeleteBrandKeyResponse": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "brandId",
+          "provider",
+          "message"
+        ]
+      },
       "DeleteOrgCredentialMaterialResponse": {
         "type": "object",
         "properties": {
@@ -1723,6 +1857,538 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DeleteOrgKeyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/keys/brands/{brandId}": {
+      "get": {
+        "summary": "List a brand's third-party keys",
+        "description": "Masked only. Scoped to orgId from the identity header (x-org-id) and the brandId in the path. Org-wide keys are a separate grain and are not listed here.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Brand identifier. Scopes the credential to one brand of the caller's org.",
+              "example": "brand-uuid-012"
+            },
+            "required": true,
+            "description": "Brand identifier. Scopes the credential to one brand of the caller's org.",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
+            },
+            "required": false,
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow slug (injected by workflow-service)",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of the brand's keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListBrandKeysResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add or update a brand's third-party key",
+        "description": "Upsert keyed on (orgId, brandId, provider). Two brands of the same org can hold different credentials for the same provider; storing one never overwrites the other, nor the org-wide key.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Brand identifier. Scopes the credential to one brand of the caller's org.",
+              "example": "brand-uuid-012"
+            },
+            "required": true,
+            "description": "Brand identifier. Scopes the credential to one brand of the caller's org.",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
+            },
+            "required": false,
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow slug (injected by workflow-service)",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBrandKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Brand key saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateBrandKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/keys/brands/{brandId}/{provider}/decrypt": {
+      "get": {
+        "summary": "Resolve a brand's decrypted third-party key",
+        "description": "Service-to-service only. Returns the credential stored for this exact (orgId, brandId, provider). There is no fallback: if the brand has no key for the provider the answer is 404 — never the org-wide key, never another brand's.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Brand identifier. Scopes the credential to one brand of the caller's org.",
+              "example": "brand-uuid-012"
+            },
+            "required": true,
+            "description": "Brand identifier. Scopes the credential to one brand of the caller's org.",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
+            },
+            "required": false,
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow slug (injected by workflow-service)",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the calling service",
+              "example": "crm"
+            },
+            "required": true,
+            "description": "Name of the calling service",
+            "name": "x-caller-service",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "HTTP method of the caller's endpoint",
+              "example": "POST"
+            },
+            "required": true,
+            "description": "HTTP method of the caller's endpoint",
+            "name": "x-caller-method",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path of the caller's endpoint",
+              "example": "/orgs/crm/contacts"
+            },
+            "required": true,
+            "description": "Path of the caller's endpoint",
+            "name": "x-caller-path",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decrypted brand key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecryptBrandKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing caller headers"
+          },
+          "404": {
+            "description": "No key stored for this brand and provider"
+          }
+        }
+      }
+    },
+    "/keys/brands/{brandId}/{provider}": {
+      "delete": {
+        "summary": "Delete a brand's third-party key",
+        "description": "Deletes only this (orgId, brandId, provider) row. Other brands of the org and the org-wide key are untouched.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Brand identifier. Scopes the credential to one brand of the caller's org.",
+              "example": "brand-uuid-012"
+            },
+            "required": true,
+            "description": "Brand identifier. Scopes the credential to one brand of the caller's org.",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal org UUID from client-service",
+              "example": "org-uuid-123"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal user UUID from client-service",
+              "example": "user-uuid-456"
+            },
+            "required": true,
+            "description": "Internal user UUID from client-service",
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
+            },
+            "required": false,
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow slug (injected by workflow-service)",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brand key deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteBrandKeyResponse"
                 }
               }
             }
