@@ -548,6 +548,49 @@ registry.registerPath({
   },
 });
 
+// ==================== Brand Transfer (/internal/transfer-brand) ====================
+
+export const TransferBrandRequestSchema = z
+  .object({
+    sourceBrandId: z.string().uuid(),
+    sourceOrgId: z.string().uuid(),
+    targetOrgId: z.string().uuid(),
+    targetBrandId: z.string().uuid().optional(),
+  })
+  .openapi("TransferBrandRequest");
+
+const TransferBrandResponseSchema = z
+  .object({
+    updatedTables: z.array(
+      z.object({
+        tableName: z.string(),
+        count: z.number().int().nonnegative(),
+      })
+    ),
+  })
+  .openapi("TransferBrandResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/internal/transfer-brand",
+  summary: "Move a brand's stored credentials to another org",
+  description:
+    "Fleet brand-transfer contract, called by brand-service when a brand moves between orgs. Moves every brand-scoped credential (brand_keys) of sourceBrandId from sourceOrgId to targetOrgId, rewriting the brand id to targetBrandId when given. Org-wide credentials are not touched. When the target already holds a credential for the same brand and provider, the target's is kept and the source row is removed. Idempotent: a repeat call moves 0. Never returns key material.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    body: { content: { "application/json": { schema: TransferBrandRequestSchema } } },
+  },
+  responses: {
+    200: {
+      description: "Brand credentials transferred",
+      content: { "application/json": { schema: TransferBrandResponseSchema } },
+    },
+    400: { description: "Invalid request" },
+    401: { description: "Unauthorized" },
+    500: { description: "Internal server error" },
+  },
+});
+
 // ==================== Platform Keys (/platform-keys) ====================
 
 export const CreatePlatformKeyRequestSchema = z
