@@ -262,6 +262,55 @@ registry.registerPath({
   },
 });
 
+// ==================== A user's own API keys across orgs (/internal/user-api-keys) ====================
+
+const UserIdParamSchema = z.object({ userId: z.string().uuid() });
+
+registry.registerPath({
+  method: "get",
+  path: "/internal/user-api-keys/by-user/{userId}",
+  summary: "List every API key a user owns, across all orgs",
+  description:
+    "A user API key belongs to its user, not to the org active when it was minted. Returns every key whose owner is this internal user UUID, in any org, newest first. No x-org-id. The caller must pass the user it authenticated, never client input.",
+  security: [{ serviceKeyAuth: [] }],
+  request: { params: UserIdParamSchema },
+  responses: {
+    200: {
+      description: "The user's API keys (each carries the orgId it was minted in)",
+      content: { "application/json": { schema: ListUserAuthKeysResponseSchema } },
+    },
+    400: { description: "userId is not a UUID" },
+    401: { description: "Unauthorized" },
+  },
+});
+
+const RevokeUserApiKeyResponseSchema = z
+  .object({
+    message: z.string(),
+    id: z.string().uuid(),
+    orgId: z.string(),
+  })
+  .openapi("RevokeUserApiKeyResponse");
+
+registry.registerPath({
+  method: "delete",
+  path: "/internal/user-api-keys/by-user/{userId}/{id}",
+  summary: "Revoke one of a user's API keys, in whatever org it was minted",
+  description:
+    "Deletes the key only if this user owns it. A key owned by someone else is a 404, the same answer as a key that does not exist.",
+  security: [{ serviceKeyAuth: [] }],
+  request: { params: UserIdParamSchema.extend({ id: z.string() }) },
+  responses: {
+    200: {
+      description: "Key revoked",
+      content: { "application/json": { schema: RevokeUserApiKeyResponseSchema } },
+    },
+    400: { description: "userId is not a UUID" },
+    401: { description: "Unauthorized" },
+    404: { description: "No key with this id owned by this user" },
+  },
+});
+
 // ==================== Org Keys (/keys) ====================
 
 const OrgKeyItemSchema = z

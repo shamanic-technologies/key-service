@@ -17,6 +17,7 @@ import platformDecryptRoutes from "./routes/platform-decrypt.js";
 import providerRequirementsRoutes from "./routes/provider-requirements.js";
 import internalKeysRoutes from "./routes/internal-keys.js";
 import transferBrandRoutes from "./routes/transfer-brand.js";
+import userApiKeysRoutes from "./routes/user-api-keys.js";
 import { serviceKeyAuth, requireIdentityHeaders, captureTrackingHeaders } from "./middleware/auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -66,6 +67,9 @@ app.use("/provider-requirements", serviceKeyAuth, providerRequirementsRoutes);
 
 // Internal org teardown — internal org UUID is carried in the path
 app.use("/internal/keys", serviceKeyAuth, internalKeysRoutes);
+
+// A user's own API keys across every org — keyed on the user UUID in the path, no x-org-id
+app.use("/internal/user-api-keys", serviceKeyAuth, userApiKeysRoutes);
 
 // Fleet brand-transfer contract — moves a brand's stored credentials between orgs
 app.use("/internal/transfer-brand", serviceKeyAuth, transferBrandRoutes);
