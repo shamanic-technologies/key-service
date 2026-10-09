@@ -3569,6 +3569,111 @@
         }
       }
     },
+    "/internal/keys/by-org/{orgId}/{provider}/source": {
+      "get": {
+        "summary": "Get an org's key source preference with no user (server-to-server)",
+        "description": "Same answer as GET /keys/{provider}/source, keyed on the internal org UUID in the path. No x-org-id or x-user-id header: for machine-triggered callers (webhooks, pollers) where no end user exists. No stored preference, or a provider never seen, returns 'platform' with isDefault=true.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Internal org UUID from client-service"
+            },
+            "required": true,
+            "description": "Internal org UUID from client-service",
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign identifier (injected by workflow-service)",
+              "example": "campaign-uuid-789"
+            },
+            "required": false,
+            "description": "Campaign identifier (injected by workflow-service)",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated brand identifiers (injected by workflow-service)",
+              "example": "brand-uuid-012,brand-uuid-345"
+            },
+            "required": false,
+            "description": "Comma-separated brand identifiers (injected by workflow-service)",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug (injected by workflow-service)",
+              "example": "lead-enrichment"
+            },
+            "required": false,
+            "description": "Workflow slug (injected by workflow-service)",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug for tracking (injected by workflow-service)",
+              "example": "press-outreach"
+            },
+            "required": false,
+            "description": "Feature slug for tracking (injected by workflow-service)",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+              "example": "audience-uuid-678"
+            },
+            "required": false,
+            "description": "Priority audience identifier for per-audience cost attribution (injected by workflow-service)",
+            "name": "x-audience-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key source preference",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetKeySourceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid orgId"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
     "/keys/sources": {
       "get": {
         "summary": "List all key source preferences for an org",

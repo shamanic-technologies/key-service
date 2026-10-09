@@ -188,4 +188,61 @@ describe("Internal org key teardown", () => {
     expect(res.status).toBe(500);
     expect(res.body.error).toBe("Internal server error");
   });
+
+  describe("GET /internal/keys/by-org/:orgId/:provider/source (no user)", () => {
+
+    it("returns the org's stored preference without any x-user-id or x-org-id header", async () => {
+      const orgId = randomId();
+      const provider = await insertTestProvider({ name: `stripe-${randomId()}` });
+      await insertTestOrgProviderKeySource({ orgId, providerId: provider.id, keySource: "org" });
+
+      const res = await request(app)
+        .get(`/internal/keys/by-org/${orgId}/${provider.name}/source`)
+        .set("x-api-key", SERVICE_KEY);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ provider: provider.name, orgId, keySource: "org", isDefault: false });
+    });
+
+    it("returns platform as the default when the org set no preference", async () => {
+      const orgId = randomId();
+      const provider = await insertTestProvider({ name: `stripe-${randomId()}` });
+      await insertTestOrgProviderKeySource({ orgId: randomId(), providerId: provider.id, keySource: "org" });
+
+      const res = await request(app)
+        .get(`/internal/keys/by-org/${orgId}/${provider.name}/source`)
+        .set("x-api-key", SERVICE_KEY);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ provider: provider.name, orgId, keySource: "platform", isDefault: true });
+    });
+
+    it("returns platform as the default for a provider key-service has never seen", async () => {
+      const orgId = randomId();
+      const res = await request(app)
+        .get(`/internal/keys/by-org/${orgId}/never-seen-${randomId()}/source`)
+        .set("x-api-key", SERVICE_KEY);
+
+      expect(res.status).toBe(200);
+      expect(res.body.keySource).toBe("platform");
+      expect(res.body.isDefault).toBe(true);
+    });
+
+    it("rejects non-UUID org identifiers", async () => {
+      const res = await request(app)
+        .get("/internal/keys/by-org/org_external_clerk_id/stripe/source")
+        .set("x-api-key", SERVICE_KEY);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("internal org UUID");
+    });
+
+    it("rejects requests without valid service auth", async () => {
+      const res = await request(app)
+        .get(`/internal/keys/by-org/${randomId()}/stripe/source`)
+        .set("x-api-key", "wrong-key");
+
+      expect(res.status).toBe(401);
+    });
+  });
 });
