@@ -949,6 +949,30 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/internal/keys/by-org/{orgId}/{provider}/source",
+  summary: "Get an org's key source preference with no user (server-to-server)",
+  description:
+    "Same answer as GET /keys/{provider}/source, keyed on the internal org UUID in the path. No x-org-id or x-user-id header: for machine-triggered callers (webhooks, pollers) where no end user exists. No stored preference, or a provider never seen, returns 'platform' with isDefault=true.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    headers: TrackingHeadersSchema,
+    params: z.object({
+      orgId: z.string().uuid().openapi({ description: "Internal org UUID from client-service" }),
+      provider: z.string(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Key source preference",
+      content: { "application/json": { schema: GetKeySourceResponseSchema } },
+    },
+    400: { description: "Invalid orgId" },
+    401: { description: "Unauthorized" },
+  },
+});
+
 // List all key source preferences for an org
 const KeySourceItemSchema = z
   .object({
