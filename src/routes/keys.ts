@@ -12,6 +12,7 @@ import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
 import { ensureProvider, getProviderByName } from "../lib/ensure-provider.js";
 import { traceEvent } from "../lib/trace-event.js";
+import { readKeySourcePreference } from "../lib/key-source.js";
 import {
   CreateOrgKeyRequestSchema,
   SetKeySourceRequestSchema,
@@ -239,30 +240,7 @@ router.get("/:provider/source", async (req: Request, res: Response) => {
   try {
     const { provider: providerName } = req.params;
     const { orgId } = req.identity!;
-
-    const provider = await getProviderByName(providerName);
-    if (!provider) {
-      return res.json({
-        provider: providerName,
-        orgId,
-        keySource: "platform",
-        isDefault: true,
-      });
-    }
-
-    const pref = await db.query.orgProviderKeySources.findFirst({
-      where: and(
-        eq(orgProviderKeySources.orgId, orgId),
-        eq(orgProviderKeySources.providerId, provider.id),
-      ),
-    });
-
-    res.json({
-      provider: providerName,
-      orgId,
-      keySource: (pref?.keySource as "org" | "platform") ?? "platform",
-      isDefault: !pref,
-    });
+    res.json(await readKeySourcePreference(orgId, providerName));
   } catch (error) {
     console.error("Get key source error:", error);
     res.status(500).json({ error: "Internal server error" });
