@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.4.0",
-    "@sentry/node": "^8.0.0",
+    "@sentry/node": "^10.76.2",
     "cors": "^2.8.5",
     "drizzle-orm": "^0.45.4",
     "express": "^4.22.3",
@@ -48,7 +48,10 @@
       "postcss@<8.5.23": "^8.5.23",
       "proxy-addr@<2.0.8": "^2.0.8",
       "source-map-js@<1.2.2": "^1.2.2",
-      "rollup@>=4.0.0 <4.59.0": "^4.59.0"
+      "rollup@>=4.0.0 <4.59.0": "^4.59.0",
+      "qs@<6.16.0": "^6.16.0",
+      "yaml@>=2.0.0 <2.8.3": "^2.8.3",
+      "@esbuild-kit/core-utils>esbuild": "^0.25.0"
     }
   }
 }
