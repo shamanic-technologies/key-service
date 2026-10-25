@@ -2,6 +2,7 @@
   "name": "@shamanic-technologies/key-service",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.15.9",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -24,7 +25,7 @@
     "drizzle-orm": "^0.45.4",
     "express": "^4.22.3",
     "postgres": "^3.4.0",
-    "zod": "^4.3.6"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -51,7 +52,9 @@
       "rollup@>=4.0.0 <4.59.0": "^4.59.0",
       "qs@<6.16.0": "^6.16.0",
       "yaml@>=2.0.0 <2.8.3": "^2.8.3",
-      "@esbuild-kit/core-utils>esbuild": "^0.25.0"
+      "@esbuild-kit/core-utils>esbuild": "^0.25.0",
+      "body-parser@<1.20.9": "^1.20.9",
+      "zod@<4.6.6": "^4.6.6"
     }
   }
 }
