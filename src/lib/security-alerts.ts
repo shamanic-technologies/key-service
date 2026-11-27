@@ -11,7 +11,9 @@
  * - key_write              a platform/org/brand key was created, changed or deleted.
  *                          Boot-time registrations re-send the SAME value and write
  *                          nothing, so they never reach this check.
- * - unknown_caller_decrypt a decrypt from a caller service not seen in 30 days.
+ * - unknown_caller_decrypt a decrypt from a caller service not seen in 30 days. Our own
+ *                          box jobs (lib/own-callers.ts) reading their listed keys are
+ *                          us and never raise; the same name reading another key does.
  * - provider_sweep         one caller service decrypted > SWEEP_PER_CALLER distinct
  *                          providers in 10 min, or one source address > SWEEP_PER_SOURCE.
  * - auth_failure_burst     >= AUTH_BURST requests with a wrong service key from one
@@ -27,6 +29,7 @@ import { and, eq, gt, lt, sql as dsql, inArray, desc } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { knownCallers, securityIncidents, secretAuditEvents } from "../db/schema.js";
 import type { AuditEvent } from "./audit.js";
+import { OWN_CALLERS, isOwnCaller, isOwnRead } from "./own-callers.js";
 
 export const WINDOW_MS = 10 * 60 * 1000;
 export const KNOWN_CALLER_DAYS = 30;
@@ -103,7 +106,17 @@ export async function runSecurityChecks(e: AuditEvent, test = false): Promise<vo
       .insert(knownCallers)
       .values({ service: e.callerService })
       .onConflictDoUpdate({ target: knownCallers.service, set: { lastSeenAt: new Date() } });
-    if (!known) {
+    if (isOwnCaller(e.callerService)) {
+      // One of our own box jobs (lib/own-callers.ts): its own keys are us, any other key is not its job.
+      if (!isOwnRead(e)) {
+        await raise({
+          kind: "unknown_caller_decrypt",
+          subject: `${e.callerService}:off-list:${e.provider ?? "-"}`,
+          summary: `Caller '${e.callerService}' read ${keyLabel(e)}, a key our own '${e.callerService}' job never reads`,
+          evidence: `By ${who(e)}. Our '${e.callerService}' job reads only: ${OWN_CALLERS[e.callerService].join(", ")}.\nIf no one just changed that job, someone is borrowing its name: rotate KEY_SERVICE_API_KEY and every key it read.\n${eventLine(e)}`,
+        });
+      }
+    } else if (!known) {
       await raise({
         kind: "unknown_caller_decrypt",
         subject: e.callerService,
