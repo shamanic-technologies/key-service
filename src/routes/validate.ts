@@ -6,6 +6,7 @@ import { hashApiKey, hasValidPrefix } from "../lib/api-key.js";
 import { decrypt } from "../lib/crypto.js";
 import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
+import { recordSecretEvent } from "../lib/audit.js";
 
 const router = Router();
 
@@ -102,6 +103,7 @@ router.get("/validate/keys/:provider", async (req: Request, res: Response) => {
 
     const caller = extractCallerHeaders(req);
     if (!caller) {
+      await recordSecretEvent(req, { action: "decrypt", grain: "org", provider: providerName, orgId: identity.orgId, outcome: "refused" });
       return res.status(400).json({
         error: "Missing required headers: X-Caller-Service, X-Caller-Method, X-Caller-Path",
       });
@@ -113,6 +115,7 @@ router.get("/validate/keys/:provider", async (req: Request, res: Response) => {
     });
 
     if (!provider) {
+      await recordSecretEvent(req, { action: "decrypt", grain: "org", provider: providerName, orgId: identity.orgId, outcome: "not_found" });
       return res.status(404).json({ error: `Key not found: no '${providerName}' key configured for this org` });
     }
 
@@ -124,10 +127,12 @@ router.get("/validate/keys/:provider", async (req: Request, res: Response) => {
     });
 
     if (!orgKey) {
+      await recordSecretEvent(req, { action: "decrypt", grain: "org", provider: providerName, orgId: identity.orgId, outcome: "not_found" });
       return res.status(404).json({ error: `Key not found: no '${providerName}' key configured for this org` });
     }
 
     await recordProviderRequirement(caller, providerName);
+    await recordSecretEvent(req, { action: "decrypt", grain: "org", provider: providerName, orgId: identity.orgId, outcome: "success" });
 
     res.json({
       provider: providerName,

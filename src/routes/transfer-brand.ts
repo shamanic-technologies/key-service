@@ -23,7 +23,8 @@
 import { Router, Request, Response } from "express";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { brandKeys } from "../db/schema.js";
+import { brandKeys, providers } from "../db/schema.js";
+import { recordSecretEvent } from "../lib/audit.js";
 import { TransferBrandRequestSchema } from "../schemas.js";
 
 const router = Router();
@@ -53,6 +54,7 @@ router.post("/", async (req: Request, res: Response) => {
 
       let moved = 0;
       let superseded = 0;
+      const touched: { providerId: string; action: "update" | "delete"; orgId: string }[] = [];
       for (const row of toMove) {
         const existing = await tx
           .select({ id: brandKeys.id })
@@ -66,17 +68,24 @@ router.post("/", async (req: Request, res: Response) => {
           );
         if (existing.length > 0) {
           await tx.delete(brandKeys).where(eq(brandKeys.id, row.id));
+          touched.push({ providerId: row.providerId, action: "delete", orgId: row.orgId });
           superseded++;
         } else {
           await tx
             .update(brandKeys)
             .set({ orgId: targetOrgId, brandId: destBrandId, updatedAt: new Date() })
             .where(eq(brandKeys.id, row.id));
+          touched.push({ providerId: row.providerId, action: "update", orgId: targetOrgId });
           moved++;
         }
       }
-      return { moved, superseded };
+      return { moved, superseded, touched };
     });
+
+    const names = new Map((await db.select({ id: providers.id, name: providers.name }).from(providers)).map((p) => [p.id, p.name]));
+    for (const t of result.touched) {
+      await recordSecretEvent(req, { action: t.action, grain: "brand", provider: names.get(t.providerId) ?? t.providerId, orgId: t.orgId, brandId: t.action === "update" ? destBrandId : sourceBrandId, outcome: "success" });
+    }
 
     console.log(
       `[key-service] transfer-brand: brand_keys moved=${result.moved} superseded=${result.superseded} ` +

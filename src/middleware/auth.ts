@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { extractTrackingHeaders } from "../lib/tracking-headers.js";
+import { recordSecretEvent, sourceIpOf } from "../lib/audit.js";
 
 /**
  * Extract optional workflow tracking headers (x-campaign-id, x-brand-id, x-workflow-slug, x-feature-slug, x-audience-id).
@@ -61,14 +62,18 @@ export function serviceKeyAuth(
     : null;
 
   if (!providedKey || providedKey !== serviceKey) {
+    // Never log any part of either key (SECURITY-ALERTS-1128): the rejected
+    // request leaves an audit row (source, path) and feeds the burst alert.
     const headerName = req.headers["x-api-key"] ? "x-api-key" : req.headers["authorization"] ? "authorization" : "none";
-    const headerType = typeof authHeader;
-    const keyPreview = providedKey ? `${providedKey.slice(0, 4)}...` : "null";
-    const expectedPreview = `${serviceKey.slice(0, 4)}...`;
     console.warn(
-      `[KEY SERVICE] auth REJECTED: method=${req.method} path=${req.path} header=${headerName} headerType=${headerType} provided=${keyPreview} expected=${expectedPreview}`
+      `[KEY SERVICE] auth REJECTED: method=${req.method} path=${req.originalUrl.split("?")[0]} header=${headerName} source=${sourceIpOf(req)}`
     );
-    return res.status(401).json({ error: "Invalid service key" });
+    recordSecretEvent(req, { action: "auth_rejected", grain: null, provider: null, outcome: "refused" })
+      .then(() => {
+        res.status(401).json({ error: "Invalid service key" });
+      })
+      .catch(next);
+    return;
   }
 
   next();

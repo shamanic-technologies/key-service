@@ -5,13 +5,20 @@
  */
 
 import { Router, Request, Response } from "express";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/index.js";
-import { orgKeys, orgProviderKeySources, userAuthKeys } from "../db/schema.js";
+import { orgKeys, orgProviderKeySources, userAuthKeys, providers } from "../db/schema.js";
 import { readKeySourcePreference } from "../lib/key-source.js";
+import { recordSecretEvent } from "../lib/audit.js";
 
 const router = Router();
+
+async function providerNames(ids: string[]): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const rows = await db.select({ name: providers.name }).from(providers).where(inArray(providers.id, ids));
+  return rows.map((r) => r.name);
+}
 const OrgIdParamSchema = z.string().uuid();
 
 /**
@@ -35,7 +42,7 @@ router.delete("/by-org/:orgId", async (req: Request, res: Response) => {
       const deletedOrgKeys = await tx
         .delete(orgKeys)
         .where(eq(orgKeys.orgId, orgId))
-        .returning({ id: orgKeys.id });
+        .returning({ id: orgKeys.id, providerId: orgKeys.providerId });
 
       const deletedApiKeys = await tx
         .delete(userAuthKeys)
@@ -46,12 +53,17 @@ router.delete("/by-org/:orgId", async (req: Request, res: Response) => {
         orgKeys: deletedOrgKeys.length,
         keySources: deletedKeySources.length,
         apiKeys: deletedApiKeys.length,
+        deletedProviderIds: deletedOrgKeys.map((r) => r.providerId),
       };
     });
 
+    for (const provider of await providerNames(deleted.deletedProviderIds)) {
+      await recordSecretEvent(req, { action: "delete", grain: "org", provider, orgId, outcome: "success" });
+    }
+
     res.json({
       orgId,
-      deleted,
+      deleted: { orgKeys: deleted.orgKeys, keySources: deleted.keySources, apiKeys: deleted.apiKeys },
       message: "Org credential material deleted successfully",
     });
   } catch (error) {

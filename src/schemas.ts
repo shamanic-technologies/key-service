@@ -973,6 +973,60 @@ registry.registerPath({
   },
 });
 
+// Security series for dashboard v2 Monitoring (SECURITY-ALERTS-1128)
+const SecurityDaySchema = z
+  .object({
+    day: z.string().openapi({ description: "UTC day, YYYY-MM-DD", example: "2026-11-28" }),
+    secretReads: z.number().int().openapi({ description: "Platform/org/brand key decrypts served" }),
+    secretReadsRefused: z.number().int().openapi({ description: "Decrypt attempts refused (no caller headers) or for a key that does not exist" }),
+    keyWrites: z.number().int().openapi({ description: "Platform/org/brand keys created, changed or deleted" }),
+    wrongKeyRequests: z.number().int().openapi({ description: "Requests refused for a wrong service key" }),
+    incidentsOpened: z.number().int().openapi({ description: "Security incidents opened (each mailed to staff once)" }),
+  })
+  .openapi("SecurityDay");
+
+const SecurityIncidentSchema = z
+  .object({
+    id: z.string().uuid(),
+    kind: z.enum(["key_write", "unknown_caller_decrypt", "provider_sweep", "auth_failure_burst"]),
+    subject: z.string(),
+    summary: z.string(),
+    openedAt: z.string(),
+    lastSeenAt: z.string(),
+    eventCount: z.number().int(),
+    alertStatus: z.enum(["pending", "sent", "failed"]),
+    alertError: z.string().nullable(),
+    test: z.boolean().openapi({ description: "Staff proof-of-fire: mailed with a [TEST] subject, never counted red" }),
+  })
+  .openapi("SecurityIncident");
+
+const SecurityDailyResponseSchema = z
+  .object({
+    red: z.boolean().openapi({ description: "True while an incident opened in the last 24 h exists or a staff alert is undelivered" }),
+    incidentsLast24h: z.number().int(),
+    undeliveredAlerts: z.number().int(),
+    days: z.array(SecurityDaySchema).openapi({ description: "Oldest first, every day present (zeros included)" }),
+    incidents: z.array(SecurityIncidentSchema).openapi({ description: "The 20 most recent incidents, newest first" }),
+  })
+  .openapi("SecurityDailyResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/internal/security/daily",
+  summary: "Daily series of secret reads, key writes, wrong-key requests and security incidents",
+  description:
+    "Staff Monitoring read. Every decrypt/create/update/delete of a platform, org or brand key and every wrong-service-key request leaves an append-only audit row (kept 90 days, never the key value); an unusual one opens a security incident mailed to staff once. Service key only, no identity headers.",
+  security: [{ serviceKeyAuth: [] }],
+  request: {
+    query: z.object({ days: z.string().optional().openapi({ description: "1-90, default 30" }) }),
+  },
+  responses: {
+    200: { description: "Series + recent incidents", content: { "application/json": { schema: SecurityDailyResponseSchema } } },
+    400: { description: "Invalid days" },
+    401: { description: "Unauthorized" },
+  },
+});
+
 // List all key source preferences for an org
 const KeySourceItemSchema = z
   .object({

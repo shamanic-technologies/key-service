@@ -1,10 +1,15 @@
 import { db, sql } from "../../src/db/index.js";
-import { userAuthKeys, orgKeys, brandKeys, platformKeys, providers, orgProviderKeySources, providerRequirements } from "../../src/db/schema.js";
+import { userAuthKeys, orgKeys, brandKeys, platformKeys, providers, orgProviderKeySources, providerRequirements, secretAuditEvents, knownCallers, securityIncidents } from "../../src/db/schema.js";
+import { flushSecurityChecks } from "../../src/lib/security-alerts.js";
 
 /**
  * Clean all test data from the database
  */
 export async function cleanTestData() {
+  await flushSecurityChecks();
+  await db.delete(secretAuditEvents);
+  await db.delete(knownCallers);
+  await db.delete(securityIncidents);
   await db.delete(userAuthKeys);
   await db.delete(orgProviderKeySources);
   await db.delete(orgKeys);
@@ -149,6 +154,7 @@ export async function insertTestProviderRequirement(
  * Close database connection
  */
 export async function closeDb() {
+  await flushSecurityChecks();
   await sql.end();
 }
 

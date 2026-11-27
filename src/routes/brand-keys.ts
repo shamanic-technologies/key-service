@@ -19,6 +19,7 @@ import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
 import { ensureProvider, getProviderByName } from "../lib/ensure-provider.js";
 import { traceEvent } from "../lib/trace-event.js";
+import { recordSecretEvent } from "../lib/audit.js";
 import { CreateBrandKeyRequestSchema } from "../schemas.js";
 
 const router = Router();
@@ -93,6 +94,7 @@ router.post("/:brandId", async (req: Request, res: Response) => {
     } else {
       await db.insert(brandKeys).values({ orgId, brandId, providerId, encryptedKey });
     }
+    await recordSecretEvent(req, { action: existing ? "update" : "create", grain: "brand", provider: providerName, orgId, brandId, outcome: "success" });
 
     const runId = req.headers["x-run-id"] as string | undefined;
     if (runId) {
@@ -129,6 +131,7 @@ router.get("/:brandId/:provider/decrypt", async (req: Request, res: Response) =>
 
     const caller = extractCallerHeaders(req);
     if (!caller) {
+      await recordSecretEvent(req, { action: "decrypt", grain: "brand", provider: providerName, orgId, brandId, outcome: "refused" });
       return res.status(400).json({
         error: "Missing required headers: X-Caller-Service, X-Caller-Method, X-Caller-Path",
       });
@@ -137,6 +140,7 @@ router.get("/:brandId/:provider/decrypt", async (req: Request, res: Response) =>
     const provider = await getProviderByName(providerName);
     if (!provider) {
       console.warn(`[key-service] GET /keys/brands/${brandId}/${providerName}/decrypt → 404: provider not found in providers table (orgId=${orgId})`);
+      await recordSecretEvent(req, { action: "decrypt", grain: "brand", provider: providerName, orgId, brandId, outcome: "not_found" });
       return res.status(404).json({
         error: `Key not found: no '${providerName}' key configured for brand '${brandId}'`,
       });
@@ -152,6 +156,7 @@ router.get("/:brandId/:provider/decrypt", async (req: Request, res: Response) =>
 
     if (!key) {
       console.warn(`[key-service] GET /keys/brands/${brandId}/${providerName}/decrypt → 404: no brand key for orgId=${orgId}`);
+      await recordSecretEvent(req, { action: "decrypt", grain: "brand", provider: providerName, orgId, brandId, outcome: "not_found" });
       return res.status(404).json({
         error: `Key not found: no '${providerName}' brand key configured for brand '${brandId}' of org '${orgId}'`,
       });
@@ -168,6 +173,7 @@ router.get("/:brandId/:provider/decrypt", async (req: Request, res: Response) =>
     }
 
     await recordProviderRequirement(caller, providerName);
+    await recordSecretEvent(req, { action: "decrypt", grain: "brand", provider: providerName, orgId, brandId, outcome: "success" });
     return res.json({
       brandId,
       provider: providerName,
@@ -193,7 +199,7 @@ router.delete("/:brandId/:provider", async (req: Request, res: Response) => {
 
     const provider = await getProviderByName(providerName);
     if (provider) {
-      await db
+      const deleted = await db
         .delete(brandKeys)
         .where(
           and(
@@ -201,7 +207,11 @@ router.delete("/:brandId/:provider", async (req: Request, res: Response) => {
             eq(brandKeys.brandId, brandId),
             eq(brandKeys.providerId, provider.id)
           )
-        );
+        )
+        .returning({ id: brandKeys.id });
+      if (deleted.length > 0) {
+        await recordSecretEvent(req, { action: "delete", grain: "brand", provider: providerName, orgId, brandId, outcome: "success" });
+      }
     }
 
     res.json({

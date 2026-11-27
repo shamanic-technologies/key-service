@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, uniqueIndex, index, integer, boolean } from "drizzle-orm/pg-core";
 
 // Provider registry — canonical list of valid provider names
 export const providers = pgTable(
@@ -153,3 +153,70 @@ export type OrgProviderKeySource = typeof orgProviderKeySources.$inferSelect;
 export type NewOrgProviderKeySource = typeof orgProviderKeySources.$inferInsert;
 export type ProviderRequirement = typeof providerRequirements.$inferSelect;
 export type NewProviderRequirement = typeof providerRequirements.$inferInsert;
+
+// Secret audit log (SECURITY-ALERTS-1128). One APPEND-ONLY row per decrypt,
+// create, update or delete of a platform, org or brand key, and per request
+// refused for a wrong service key. Never holds a key value. A migration trigger
+// refuses UPDATE and refuses DELETE of rows younger than 90 days; the hourly
+// retention sweep deletes what is older.
+export const secretAuditEvents = pgTable(
+  "secret_audit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    action: text("action").notNull(), // decrypt | create | update | delete | auth_rejected
+    grain: text("grain"), // platform | org | brand (null on auth_rejected)
+    provider: text("provider"),
+    orgId: text("org_id"),
+    brandId: text("brand_id"),
+    callerService: text("caller_service"),
+    callerMethod: text("caller_method"),
+    callerPath: text("caller_path"),
+    requestMethod: text("request_method").notNull(),
+    requestPath: text("request_path").notNull(),
+    sourceIp: text("source_ip").notNull(),
+    forwardedFor: text("forwarded_for"),
+    outcome: text("outcome").notNull(), // success | not_found | refused
+  },
+  (table) => [
+    index("idx_secret_audit_created").on(table.createdAt),
+    index("idx_secret_audit_caller_created").on(table.callerService, table.createdAt),
+    index("idx_secret_audit_ip_created").on(table.sourceIp, table.createdAt),
+    index("idx_secret_audit_action_created").on(table.action, table.createdAt),
+  ]
+);
+
+// Caller services that decrypted a key, with when each was last seen. A decrypt
+// from a service absent here, or last seen more than 30 days ago, raises an
+// unknown_caller_decrypt incident.
+export const knownCallers = pgTable("known_callers", {
+  service: text("service").primaryKey(),
+  firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Security incidents: one row per (kind, subject) episode; a repeat within an
+// hour of the last sighting joins the open episode instead of mailing again.
+// The staff alert is sent once per incident, eventId `key-service:<kind>:<id>`.
+export const securityIncidents = pgTable(
+  "security_incidents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: text("kind").notNull(),
+    subject: text("subject").notNull(),
+    openedAt: timestamp("opened_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    eventCount: integer("event_count").notNull().default(1),
+    summary: text("summary").notNull(),
+    evidence: text("evidence").notNull(),
+    test: boolean("test").notNull().default(false), // staff proof-of-fire: [TEST] subject, never red
+    alertStatus: text("alert_status").notNull(), // pending | sent | failed
+    alertAttempts: integer("alert_attempts").notNull().default(0),
+    alertError: text("alert_error"),
+    alertedAt: timestamp("alerted_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("idx_security_incidents_kind_subject").on(table.kind, table.subject, table.lastSeenAt),
+    index("idx_security_incidents_opened").on(table.openedAt),
+  ]
+);
