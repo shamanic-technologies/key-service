@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import express from "express";
 import request from "supertest";
+// The rejection audit row is covered by tests/integration/security-audit.test.ts; here no DB.
+vi.mock("../../src/lib/audit.js", () => ({
+  recordSecretEvent: vi.fn(async () => ({})),
+  sourceIpOf: () => "127.0.0.1",
+}));
+
 import { serviceKeyAuth } from "../../src/middleware/auth.js";
 
 function createApp() {

@@ -18,6 +18,8 @@ import providerRequirementsRoutes from "./routes/provider-requirements.js";
 import internalKeysRoutes from "./routes/internal-keys.js";
 import transferBrandRoutes from "./routes/transfer-brand.js";
 import userApiKeysRoutes from "./routes/user-api-keys.js";
+import securityRoutes from "./routes/security.js";
+import { startSecuritySweeps } from "./lib/security-alerts.js";
 import { serviceKeyAuth, requireIdentityHeaders, captureTrackingHeaders } from "./middleware/auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -71,6 +73,9 @@ app.use("/internal/keys", serviceKeyAuth, internalKeysRoutes);
 // A user's own API keys across every org — keyed on the user UUID in the path, no x-org-id
 app.use("/internal/user-api-keys", serviceKeyAuth, userApiKeysRoutes);
 
+// Security series for dashboard v2 Monitoring (secret reads/writes, wrong-key requests, incidents)
+app.use("/internal/security", serviceKeyAuth, securityRoutes);
+
 // Fleet brand-transfer contract — moves a brand's stored credentials between orgs
 app.use("/internal/transfer-brand", serviceKeyAuth, transferBrandRoutes);
 
@@ -100,6 +105,7 @@ if (process.env.NODE_ENV !== "test") {
       console.log("Migrations complete");
       app.listen(Number(PORT), "::", () => {
         console.log(`Key service running on port ${PORT}`);
+        startSecuritySweeps();
       });
     })
     .catch((err) => {

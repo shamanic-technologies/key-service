@@ -11,6 +11,7 @@ import { encrypt, decrypt, maskKey } from "../lib/crypto.js";
 import { ensureProvider, getProviderByName } from "../lib/ensure-provider.js";
 import { CreatePlatformKeyRequestSchema } from "../schemas.js";
 import { traceEvent } from "../lib/trace-event.js";
+import { recordSecretEvent } from "../lib/audit.js";
 
 const router = Router();
 
@@ -72,6 +73,7 @@ router.post("/", async (req: Request, res: Response) => {
           .set({ encryptedKey, updatedAt: new Date() })
           .where(eq(platformKeys.id, existing.id));
         console.log(`[key-service] Platform key updated: provider="${providerName}"`);
+        await recordSecretEvent(req, { action: "update", grain: "platform", provider: providerName, outcome: "success" });
       }
     } else {
       await db.insert(platformKeys).values({
@@ -79,6 +81,7 @@ router.post("/", async (req: Request, res: Response) => {
         encryptedKey,
       });
       console.log(`[key-service] Platform key created: provider="${providerName}"`);
+      await recordSecretEvent(req, { action: "create", grain: "platform", provider: providerName, outcome: "success" });
     }
 
     const runId = req.headers["x-run-id"] as string | undefined;
@@ -112,9 +115,13 @@ router.delete("/:provider", async (req: Request, res: Response) => {
 
     const provider = await getProviderByName(providerName);
     if (provider) {
-      await db
+      const deleted = await db
         .delete(platformKeys)
-        .where(eq(platformKeys.providerId, provider.id));
+        .where(eq(platformKeys.providerId, provider.id))
+        .returning({ id: platformKeys.id });
+      if (deleted.length > 0) {
+        await recordSecretEvent(req, { action: "delete", grain: "platform", provider: providerName, outcome: "success" });
+      }
     }
 
     res.json({
