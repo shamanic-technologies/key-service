@@ -216,6 +216,85 @@ describe("secret audit + security alerts (SECURITY-ALERTS-1128)", () => {
     });
   });
 
+  describe("our own box jobs (SECURITY-OWN-ACTORS-1128)", () => {
+    const R2 = [
+      "cloudflare-r2-access-key-id",
+      "cloudflare-r2-secret-access-key",
+      "cloudflare-r2-account-id",
+      "cloudflare-r2-private-bucket-name",
+      "cloudflare-r2-bucket-name",
+    ];
+    const box = (service: string, path: string) => ({ "x-caller-service": service, "x-caller-method": "GET", "x-caller-path": path });
+
+    it("replaying 2026-11-27's first runs of security-watch and security-ship mails nothing and stays green", async () => {
+      for (const p of ["anthropic", "postmark", "stripe", ...R2]) await seedPlatformKey(p);
+      for (const p of ["anthropic", "postmark", "stripe"]) {
+        await request(app).get(`/keys/platform/${p}/decrypt`).set(auth).set(box("security-watch", "/box/security-watch/vendor-keys")).expect(200);
+      }
+      for (const p of R2) {
+        await request(app).get(`/keys/platform/${p}/decrypt`).set(auth).set(box("security-ship", "/box/security-ship")).expect(200);
+      }
+      expect(await incidents()).toHaveLength(0);
+      expect(alertCalls()).toHaveLength(0);
+      expect((await audits()).length).toBe(8); // still audited, every read
+      const res = await request(app).get("/internal/security/daily?days=1").set(auth).expect(200);
+      expect(res.body.red).toBe(false);
+    });
+
+    it("our job stays us after 31 idle days", async () => {
+      await seedPlatformKey("stripe");
+      await db.insert(knownCallers).values({ service: "security-watch", lastSeenAt: new Date(Date.now() - 31 * 86_400_000) });
+      await request(app).get("/keys/platform/stripe/decrypt").set(auth).set(box("security-watch", "/box/security-watch/vendor-keys")).expect(200);
+      expect(await incidents()).toHaveLength(0);
+      expect(alertCalls()).toHaveLength(0);
+    });
+
+    it("the same read by an unknown caller name still mails staff", async () => {
+      await seedPlatformKey("anthropic");
+      await request(app).get("/keys/platform/anthropic/decrypt").set(auth).set(box("security-watch-2", "/box/x")).expect(200);
+      expect((await incidents()).map((i) => [i.kind, i.subject])).toEqual([["unknown_caller_decrypt", "security-watch-2"]]);
+      expect(alertCalls()).toHaveLength(1);
+    });
+
+    it("our job's name reading a key that job never reads still mails staff, even once the name is known", async () => {
+      await seedPlatformKey("openai");
+      await known("security-watch");
+      await request(app).get("/keys/platform/openai/decrypt").set(auth).set(box("security-watch", "/box/security-watch/vendor-keys")).expect(200);
+      const inc = await incidents();
+      expect(inc.map((i) => [i.kind, i.subject])).toEqual([["unknown_caller_decrypt", "security-watch:off-list:openai"]]);
+      const calls = alertCalls();
+      expect(calls).toHaveLength(1);
+      expect(calls[0].metadata.summary).toContain("never reads");
+      const res = await request(app).get("/internal/security/daily?days=1").set(auth).expect(200);
+      expect(res.body.red).toBe(true);
+      expect(res.body.incidents[0].ourOwn).toBe(false);
+    });
+
+    it("an org key read under our job's name still mails staff", async () => {
+      const p = await insertTestProvider({ name: "stripe" });
+      await insertTestOrgKey(p.id, { orgId: "org-1", encryptedKey: encrypt(SECRET) });
+      await insertTestOrgProviderKeySource({ orgId: "org-1", providerId: p.id, keySource: "org" });
+      await request(app)
+        .get("/keys/stripe/decrypt")
+        .set(auth)
+        .set({ "x-org-id": "org-1", "x-user-id": "user-1" })
+        .set(box("security-watch", "/box/x"));
+      expect((await incidents()).map((i) => i.subject)).toEqual(["security-watch:off-list:stripe"]);
+    });
+
+    it("2026-11-27's incidents on our jobs' bare names are listed as ours and never turn Monitoring red", async () => {
+      await db.insert(securityIncidents).values([
+        { kind: "unknown_caller_decrypt", subject: "security-ship", summary: "Unknown caller 'security-ship' read platform key 'cloudflare-r2-access-key-id'", evidence: "-", alertStatus: "sent" },
+        { kind: "unknown_caller_decrypt", subject: "security-watch", summary: "Unknown caller 'security-watch' read platform key 'anthropic'", evidence: "-", alertStatus: "sent" },
+      ]);
+      const res = await request(app).get("/internal/security/daily?days=1").set(auth).expect(200);
+      expect(res.body.red).toBe(false);
+      expect(res.body.incidentsLast24h).toBe(0);
+      expect(res.body.days[0].incidentsOpened).toBe(0);
+      expect(res.body.incidents.map((i: { ourOwn: boolean }) => i.ourOwn)).toEqual([true, true]);
+    });
+  });
+
   describe("provider sweep", () => {
     it(`> ${SWEEP_PER_CALLER} distinct providers from one caller in 10 min is ONE incident`, async () => {
       await known("auto-collect");

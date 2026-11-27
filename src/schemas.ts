@@ -997,6 +997,7 @@ const SecurityIncidentSchema = z
     alertStatus: z.enum(["pending", "sent", "failed"]),
     alertError: z.string().nullable(),
     test: z.boolean().openapi({ description: "Staff proof-of-fire: mailed with a [TEST] subject, never counted red" }),
+    ourOwn: z.boolean().openapi({ description: "Raised by one of our own box jobs reading its own keys (before that was recognised): listed, never counted red" }),
   })
   .openapi("SecurityIncident");
 

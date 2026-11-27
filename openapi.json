@@ -983,6 +983,14 @@
           "alertError": {
             "type": "string",
             "nullable": true
+          },
+          "test": {
+            "type": "boolean",
+            "description": "Staff proof-of-fire: mailed with a [TEST] subject, never counted red"
+          },
+          "ourOwn": {
+            "type": "boolean",
+            "description": "Raised by one of our own box jobs reading its own keys (before that was recognised): listed, never counted red"
           }
         },
         "required": [
@@ -994,7 +1002,9 @@
           "lastSeenAt",
           "eventCount",
           "alertStatus",
-          "alertError"
+          "alertError",
+          "test",
+          "ourOwn"
         ]
       },
       "ListKeySourcesResponse": {
