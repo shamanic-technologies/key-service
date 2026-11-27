@@ -12,6 +12,7 @@ import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
 import { getProviderByName } from "../lib/ensure-provider.js";
 import { traceEvent } from "../lib/trace-event.js";
+import { recordSecretEvent } from "../lib/audit.js";
 
 const router = Router();
 
@@ -25,6 +26,7 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
 
     const caller = extractCallerHeaders(req);
     if (!caller) {
+      await recordSecretEvent(req, { action: "decrypt", grain: "platform", provider: providerName, outcome: "refused" });
       return res.status(400).json({
         error: "Missing required headers: X-Caller-Service, X-Caller-Method, X-Caller-Path",
       });
@@ -33,6 +35,7 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
     const provider = await getProviderByName(providerName);
     if (!provider) {
       console.warn(`[key-service] GET /keys/platform/${providerName}/decrypt → 404: provider not found in providers table`);
+      await recordSecretEvent(req, { action: "decrypt", grain: "platform", provider: providerName, outcome: "not_found" });
       return res.status(404).json({ error: `Platform key not found: no '${providerName}' platform key configured` });
     }
 
@@ -42,10 +45,12 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
 
     if (!key) {
       console.warn(`[key-service] GET /keys/platform/${providerName}/decrypt → 404: provider exists but no platform key row`);
+      await recordSecretEvent(req, { action: "decrypt", grain: "platform", provider: providerName, outcome: "not_found" });
       return res.status(404).json({ error: `Platform key not found: no '${providerName}' platform key configured` });
     }
 
     await recordProviderRequirement(caller, providerName);
+    await recordSecretEvent(req, { action: "decrypt", grain: "platform", provider: providerName, outcome: "success" });
 
     const runId = req.headers["x-run-id"] as string | undefined;
     if (runId) {

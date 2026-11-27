@@ -867,6 +867,136 @@
           "isDefault"
         ]
       },
+      "SecurityDailyResponse": {
+        "type": "object",
+        "properties": {
+          "red": {
+            "type": "boolean",
+            "description": "True while an incident opened in the last 24 h exists or a staff alert is undelivered"
+          },
+          "incidentsLast24h": {
+            "type": "integer"
+          },
+          "undeliveredAlerts": {
+            "type": "integer"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SecurityDay"
+            },
+            "description": "Oldest first, every day present (zeros included)"
+          },
+          "incidents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SecurityIncident"
+            },
+            "description": "The 20 most recent incidents, newest first"
+          }
+        },
+        "required": [
+          "red",
+          "incidentsLast24h",
+          "undeliveredAlerts",
+          "days",
+          "incidents"
+        ]
+      },
+      "SecurityDay": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "description": "UTC day, YYYY-MM-DD",
+            "example": "2026-11-28"
+          },
+          "secretReads": {
+            "type": "integer",
+            "description": "Platform/org/brand key decrypts served"
+          },
+          "secretReadsRefused": {
+            "type": "integer",
+            "description": "Decrypt attempts refused (no caller headers) or for a key that does not exist"
+          },
+          "keyWrites": {
+            "type": "integer",
+            "description": "Platform/org/brand keys created, changed or deleted"
+          },
+          "wrongKeyRequests": {
+            "type": "integer",
+            "description": "Requests refused for a wrong service key"
+          },
+          "incidentsOpened": {
+            "type": "integer",
+            "description": "Security incidents opened (each mailed to staff once)"
+          }
+        },
+        "required": [
+          "day",
+          "secretReads",
+          "secretReadsRefused",
+          "keyWrites",
+          "wrongKeyRequests",
+          "incidentsOpened"
+        ]
+      },
+      "SecurityIncident": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "key_write",
+              "unknown_caller_decrypt",
+              "provider_sweep",
+              "auth_failure_burst"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "openedAt": {
+            "type": "string"
+          },
+          "lastSeenAt": {
+            "type": "string"
+          },
+          "eventCount": {
+            "type": "integer"
+          },
+          "alertStatus": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "sent",
+              "failed"
+            ]
+          },
+          "alertError": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "subject",
+          "summary",
+          "openedAt",
+          "lastSeenAt",
+          "eventCount",
+          "alertStatus",
+          "alertError"
+        ]
+      },
       "ListKeySourcesResponse": {
         "type": "object",
         "properties": {
@@ -3667,6 +3797,47 @@
           },
           "400": {
             "description": "Invalid orgId"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/internal/security/daily": {
+      "get": {
+        "summary": "Daily series of secret reads, key writes, wrong-key requests and security incidents",
+        "description": "Staff Monitoring read. Every decrypt/create/update/delete of a platform, org or brand key and every wrong-service-key request leaves an append-only audit row (kept 90 days, never the key value); an unusual one opens a security incident mailed to staff once. Service key only, no identity headers.",
+        "security": [
+          {
+            "serviceKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "1-90, default 30"
+            },
+            "required": false,
+            "description": "1-90, default 30",
+            "name": "days",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Series + recent incidents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityDailyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid days"
           },
           "401": {
             "description": "Unauthorized"

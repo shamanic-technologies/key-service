@@ -12,6 +12,7 @@ import { extractCallerHeaders } from "../lib/caller-headers.js";
 import { recordProviderRequirement } from "../lib/provider-registry.js";
 import { ensureProvider, getProviderByName } from "../lib/ensure-provider.js";
 import { traceEvent } from "../lib/trace-event.js";
+import { recordSecretEvent } from "../lib/audit.js";
 import { readKeySourcePreference } from "../lib/key-source.js";
 import {
   CreateOrgKeyRequestSchema,
@@ -99,6 +100,7 @@ router.post("/", async (req: Request, res: Response) => {
         encryptedKey,
       });
     }
+    await recordSecretEvent(req, { action: existing ? "update" : "create", grain: "org", provider: providerName, orgId, outcome: "success" });
 
     const runId = req.headers["x-run-id"] as string | undefined;
     if (runId) {
@@ -258,6 +260,7 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
 
     const caller = extractCallerHeaders(req);
     if (!caller) {
+      await recordSecretEvent(req, { action: "decrypt", grain: "org", provider: providerName, orgId, outcome: "refused" });
       return res.status(400).json({
         error: "Missing required headers: X-Caller-Service, X-Caller-Method, X-Caller-Path",
       });
@@ -266,6 +269,7 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
     const provider = await getProviderByName(providerName);
     if (!provider) {
       console.warn(`[key-service] GET /keys/${providerName}/decrypt → 404: provider not found in providers table (orgId=${orgId})`);
+      await recordSecretEvent(req, { action: "decrypt", grain: "org", provider: providerName, orgId, outcome: "not_found" });
       return res.status(404).json({ error: `Key not found: no '${providerName}' key configured` });
     }
 
@@ -287,9 +291,11 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
       });
       if (!key) {
         console.warn(`[key-service] GET /keys/${providerName}/decrypt → 404: no org key for orgId=${orgId}`);
+        await recordSecretEvent(req, { action: "decrypt", grain: "org", provider: providerName, orgId, outcome: "not_found" });
         return res.status(404).json({ error: `Key not found: no '${providerName}' org key configured for org '${orgId}'` });
       }
       await recordProviderRequirement(caller, providerName);
+      await recordSecretEvent(req, { action: "decrypt", grain: "org", provider: providerName, orgId, outcome: "success" });
       return res.json({ provider: providerName, key: decrypt(key.encryptedKey), keySource: "org", userId });
     }
 
@@ -299,9 +305,11 @@ router.get("/:provider/decrypt", async (req: Request, res: Response) => {
     });
     if (!key) {
       console.warn(`[key-service] GET /keys/${providerName}/decrypt → 404: provider exists but no platform key row`);
+      await recordSecretEvent(req, { action: "decrypt", grain: "platform", provider: providerName, orgId, outcome: "not_found" });
       return res.status(404).json({ error: `Key not found: no '${providerName}' platform key configured` });
     }
     await recordProviderRequirement(caller, providerName);
+    await recordSecretEvent(req, { action: "decrypt", grain: "platform", provider: providerName, orgId, outcome: "success" });
     return res.json({ provider: providerName, key: decrypt(key.encryptedKey), keySource: "platform", userId });
   } catch (error) {
     console.error("Decrypt key error:", error);
@@ -321,9 +329,13 @@ router.delete("/:provider", async (req: Request, res: Response) => {
 
     const provider = await getProviderByName(providerName);
     if (provider) {
-      await db
+      const deleted = await db
         .delete(orgKeys)
-        .where(and(eq(orgKeys.orgId, orgId), eq(orgKeys.providerId, provider.id)));
+        .where(and(eq(orgKeys.orgId, orgId), eq(orgKeys.providerId, provider.id)))
+        .returning({ id: orgKeys.id });
+      if (deleted.length > 0) {
+        await recordSecretEvent(req, { action: "delete", grain: "org", provider: providerName, orgId, outcome: "success" });
+      }
     }
 
     res.json({
