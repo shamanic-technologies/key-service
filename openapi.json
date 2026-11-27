@@ -990,7 +990,12 @@
           },
           "ourOwn": {
             "type": "boolean",
-            "description": "Raised by one of our own box jobs reading its own keys (before that was recognised): listed, never counted red"
+            "description": "Caused by us: one of our own box jobs reading its own keys (before that was recognised), or judged ours by transactional-email-service (oursReason). Listed, never counted red"
+          },
+          "oursReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Why transactional-email-service judged this alert caused by us (recorded on Monitoring, not emailed; SECURITY-ALERTS-OURS-1128). Null = an ordinary alert."
           }
         },
         "required": [
@@ -1004,7 +1009,8 @@
           "alertStatus",
           "alertError",
           "test",
-          "ourOwn"
+          "ourOwn",
+          "oursReason"
         ]
       },
       "ListKeySourcesResponse": {

@@ -419,4 +419,37 @@ describe("secret audit + security alerts (SECURITY-ALERTS-1128)", () => {
       expect(await db.select().from(secretAuditEvents)).toHaveLength(1);
     });
   });
+
+  // SECURITY-ALERTS-OURS-1128: transactional-email-service decides whether an alert was caused by us.
+  // key-service hands the source address and stores the answer: an incident judged ours is listed, never red.
+  describe("origin + ours (SECURITY-ALERTS-OURS-1128)", () => {
+    it("the alert carries originIp; an answer `ours` is stored and the incident never turns red", async () => {
+      fetchMock.mockImplementation(async () =>
+        new Response(JSON.stringify({ sent: false, duplicate: false, ours: "from inside our server (172.18.0.5), relaying nobody, while one of us was logged in over SSH" }), { status: 200 }),
+      );
+      await seedPlatformKey("anthropic");
+      await request(app).get("/keys/platform/anthropic/decrypt").set(auth).set(caller("secrets-rotate-1127")).expect(200);
+      const [inc] = await incidents();
+      expect(inc.kind).toBe("unknown_caller_decrypt");
+      expect(inc.originIp).toBeTruthy();
+      expect(inc.alertStatus).toBe("sent");
+      expect(inc.oursReason).toMatch(/from inside our server/);
+      expect(alertCalls()[0].metadata.originIp).toBe(inc.originIp);
+
+      const res = await request(app).get("/internal/security/daily?days=1").set(auth).expect(200);
+      expect(res.body.red).toBe(false);
+      expect(res.body.days[0].incidentsOpened).toBe(0);
+      expect(res.body.incidents[0]).toMatchObject({ ourOwn: true, oursReason: expect.stringMatching(/inside our server/) });
+    });
+
+    it("an answer without `ours` (emailed) stays red", async () => {
+      fetchMock.mockImplementation(async () => new Response(JSON.stringify({ sent: true, duplicate: false }), { status: 200 }));
+      await seedPlatformKey("anthropic");
+      await request(app).get("/keys/platform/anthropic/decrypt").set(auth).set(caller("probe26235")).expect(200);
+      const [inc] = await incidents();
+      expect(inc.oursReason).toBeNull();
+      const res = await request(app).get("/internal/security/daily?days=1").set(auth).expect(200);
+      expect(res.body.red).toBe(true);
+    });
+  });
 });
