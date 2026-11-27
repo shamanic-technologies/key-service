@@ -85,6 +85,13 @@
       "when": 1795824000000,
       "tag": "0011_secret_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795910400000,
+      "tag": "0012_incident_origin_ip",
+      "breakpoints": true
     }
   ]
 }

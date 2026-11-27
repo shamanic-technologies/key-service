@@ -87,7 +87,7 @@ function eventLine(e: AuditEvent): string {
 }
 
 export async function runSecurityChecks(e: AuditEvent, test = false): Promise<void> {
-  const raise = (input: IncidentInput) => raiseIncident({ ...input, test });
+  const raise = (input: IncidentInput) => raiseIncident({ ...input, test, originIp: e.sourceIp });
   if ((e.action === "create" || e.action === "update" || e.action === "delete") && e.outcome === "success") {
     await raise({
       kind: "key_write",
@@ -182,6 +182,8 @@ interface IncidentInput {
   evidence: string;
   /** Staff proof-of-fire: [TEST] subject, never joins a real incident, never red. */
   test?: boolean;
+  /** The request's source address (SECURITY-ALERTS-OURS-1128): key-service is reached only from inside the box. */
+  originIp?: string;
 }
 
 /**
@@ -217,6 +219,7 @@ export async function raiseIncident(input: IncidentInput): Promise<{ id: string;
         evidence: input.evidence.slice(0, 4000),
         test,
         alertStatus: "pending",
+        originIp: input.originIp ?? null,
       })
       .returning({ id: securityIncidents.id });
     return { id: row.id, opened: true };
@@ -238,19 +241,23 @@ export async function deliverIncidentAlert(id: string): Promise<boolean> {
   if (!incident) throw new Error(`security incident ${id} not found`);
   if (incident.alertStatus === "sent") return true;
   try {
-    await sendSecurityAlert({
+    const answer = await sendSecurityAlert({
       eventId: incidentEventId(incident.kind, incident.id),
       kind: incident.kind,
       summary: incident.summary,
       evidence: `${incident.evidence}\nIncident ${incident.id}, opened ${incident.openedAt.toISOString()}.`,
       firstSeenAt: incident.openedAt.toISOString(),
       test: incident.test,
+      originIp: incident.originIp,
     });
     await db
       .update(securityIncidents)
-      .set({ alertStatus: "sent", alertedAt: new Date(), alertAttempts: incident.alertAttempts + 1, alertError: null })
+      .set({ alertStatus: "sent", alertedAt: new Date(), alertAttempts: incident.alertAttempts + 1, alertError: null, oursReason: answer.ours ?? null })
       .where(eq(securityIncidents.id, id));
-    console.warn(`[key-service] SECURITY alert sent to staff: ${incident.kind} ${incident.subject} (${id})`);
+    // `ours`: transactional-email-service judged it caused by us (SECURITY-ALERTS-OURS-1128):
+    // recorded on Monitoring there, not emailed. Delivered all the same.
+    if (answer.ours) console.log(`[key-service] SECURITY alert recorded, not emailed (ours: ${answer.ours}): ${incident.kind} ${incident.subject} (${id})`);
+    else console.warn(`[key-service] SECURITY alert sent to staff: ${incident.kind} ${incident.subject} (${id})`);
     return true;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -270,10 +277,11 @@ export interface SecurityAlertPayload {
   evidence: string;
   firstSeenAt: string;
   test: boolean;
+  originIp?: string | null;
 }
 
 /** transactional-email-service POST /platform-staff-alert, eventType `security_alert`: staff list only, once per eventId. */
-export async function sendSecurityAlert(payload: SecurityAlertPayload): Promise<void> {
+export async function sendSecurityAlert(payload: SecurityAlertPayload): Promise<{ ours?: string }> {
   const url = process.env.TRANSACTIONAL_EMAIL_SERVICE_URL?.trim();
   const apiKey = process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY?.trim();
   if (!url || !apiKey) throw new Error("TRANSACTIONAL_EMAIL_SERVICE_URL or TRANSACTIONAL_EMAIL_SERVICE_API_KEY not set");
@@ -289,6 +297,7 @@ export async function sendSecurityAlert(payload: SecurityAlertPayload): Promise<
         evidence: payload.evidence,
         firstSeenAt: payload.firstSeenAt,
         ...(payload.test ? { test: "true" } : {}),
+        ...(payload.originIp ? { originIp: payload.originIp } : {}),
       },
     }),
     signal: AbortSignal.timeout(20_000),
@@ -297,6 +306,8 @@ export async function sendSecurityAlert(payload: SecurityAlertPayload): Promise<
     const body = await res.text().catch(() => "");
     throw new Error(`transactional-email platform-staff-alert ${res.status}: ${body.slice(0, 300)}`);
   }
+  const answer = (await res.json()) as { ours?: unknown };
+  return typeof answer.ours === "string" ? { ours: answer.ours } : {};
 }
 
 /** Resend every undelivered alert of the last 24 h. */

@@ -214,6 +214,10 @@ export const securityIncidents = pgTable(
     alertAttempts: integer("alert_attempts").notNull().default(0),
     alertError: text("alert_error"),
     alertedAt: timestamp("alerted_at", { withTimezone: true }),
+    // SECURITY-ALERTS-OURS-1128: where the first request came from (handed with the alert;
+    // transactional-email-service decides whether the alert was caused by us).
+    originIp: text("origin_ip"),
+    oursReason: text("ours_reason"), // set when transactional-email judged it caused by us: not emailed, never red
   },
   (table) => [
     index("idx_security_incidents_kind_subject").on(table.kind, table.subject, table.lastSeenAt),
