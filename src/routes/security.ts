@@ -57,6 +57,7 @@ router.get("/daily", async (req: Request, res: Response) => {
         select (opened_at at time zone 'utc')::date as day, count(*)::int as incidents
         from security_incidents
         where not test
+          and ours_reason is null
           and not (kind = 'unknown_caller_decrypt' and subject = any(${OWN_CALLER_NAMES}::text[]))
           and opened_at >= (now() at time zone 'utc')::date - (${days}::int - 1)
         group by 1
@@ -79,7 +80,10 @@ router.get("/daily", async (req: Request, res: Response) => {
     const dayAgo = Date.now() - 86_400_000;
     // An incident opened on one of our own jobs' bare name (2026-11-27, before lib/own-callers.ts) was us:
     // listed, never red. Since the fix such an incident can only open under `<job>:off-list:<key>`, which stays red.
-    const ourOwn = (i: { kind: string; subject: string }) => i.kind === "unknown_caller_decrypt" && isOwnCaller(i.subject);
+    // Since SECURITY-ALERTS-OURS-1128 transactional-email-service judges every alert (staff IP, box-internal while one
+    // of us is logged in): its reason is stored on the incident, listed as ours, never red.
+    const ourOwn = (i: { kind: string; subject: string; oursReason: string | null }) =>
+      i.oursReason !== null || (i.kind === "unknown_caller_decrypt" && isOwnCaller(i.subject));
     const real = incidents.filter((i) => !i.test && !ourOwn(i));
     const recentIncidents = real.filter((i) => i.openedAt.getTime() > dayAgo).length;
     const undelivered = real.filter((i) => i.alertStatus !== "sent").length;
@@ -108,6 +112,7 @@ router.get("/daily", async (req: Request, res: Response) => {
         alertError: i.alertError,
         test: i.test,
         ourOwn: ourOwn(i),
+        oursReason: i.oursReason,
       })),
     });
   } catch (error) {
