@@ -10,6 +10,7 @@ import {
   retryUndeliveredAlerts,
   pruneAuditEvents,
   SWEEP_PER_CALLER,
+  SWEEP_PER_SOURCE,
   AUTH_BURST,
 } from "../../src/lib/security-alerts.js";
 import {
@@ -315,6 +316,57 @@ describe("secret audit + security alerts (SECURITY-ALERTS-1128)", () => {
         await request(app).get(`/keys/platform/prov-${i}/decrypt`).set(auth).set(caller("chat-service")).expect(200);
       }
       expect(await incidents()).toHaveLength(0);
+    });
+  });
+
+  describe("our backup's bulk read (BACKUP-SWEEP-ALERT-1128)", () => {
+    const DSNS = Array.from({ length: 37 }, (_, i) => `pg-backup-dsn-db${i}_service`);
+    const R2 = ["cloudflare-r2-access-key-id", "cloudflare-r2-secret-access-key", "cloudflare-r2-account-id", "cloudflare-r2-private-bucket-name"];
+    const job = { "x-caller-service": "pg-backup", "x-caller-method": "CRON", "x-caller-path": "/jobs/pg-backup" };
+
+    async function replayBackup() {
+      for (const p of [...DSNS, ...R2]) await seedPlatformKey(p);
+      for (const p of [...DSNS, ...R2]) await request(app).get(`/keys/platform/${p}/decrypt`).set(auth).set(job).expect(200);
+    }
+
+    // 2026-11-28 15:00 the source address read 41 distinct secrets: 37 DSNs + 4 R2 keys reproduce it.
+    it("replaying 2026-11-28 15:00 (every DSN + the R2 keys) raises no sweep, per caller or per source, and mails nothing", async () => {
+      expect(DSNS.length + R2.length).toBeGreaterThan(SWEEP_PER_SOURCE);
+      await replayBackup();
+      expect(await incidents()).toHaveLength(0);
+      expect(alertCalls()).toHaveLength(0);
+      expect((await audits()).length).toBe(DSNS.length + R2.length); // still audited, every read
+    });
+
+    it("the same caller reading one off-list key still raises", async () => {
+      await replayBackup();
+      await seedPlatformKey("anthropic");
+      await request(app).get("/keys/platform/anthropic/decrypt").set(auth).set(job).expect(200);
+      expect((await incidents()).map((i) => [i.kind, i.subject])).toEqual([["unknown_caller_decrypt", "pg-backup:off-list:anthropic"]]);
+      expect(alertCalls()).toHaveLength(1);
+    });
+
+    it("off-list reads by our job's name count toward the sweep", async () => {
+      for (let i = 0; i <= SWEEP_PER_CALLER; i++) {
+        await seedPlatformKey(`prov-${i}`);
+        await request(app).get(`/keys/platform/prov-${i}/decrypt`).set(auth).set(job).expect(200);
+      }
+      expect((await incidents()).filter((i) => i.kind === "provider_sweep").map((i) => i.subject)).toEqual(["caller:pg-backup"]);
+    });
+
+    it("a different caller reading the same DSNs still raises both sweeps", async () => {
+      await known("cloudflare-storage");
+      for (const p of [...DSNS, ...R2]) await seedPlatformKey(p);
+      for (const p of [...DSNS, ...R2]) await request(app).get(`/keys/platform/${p}/decrypt`).set(auth).set(caller("cloudflare-storage")).expect(200);
+      const subjects = (await incidents()).filter((i) => i.kind === "provider_sweep").map((i) => i.subject.split(":")[0]).sort();
+      expect(subjects).toEqual(["caller", "source"]);
+      expect(alertCalls().filter((c) => c.metadata.kind === "provider_sweep")).toHaveLength(2);
+    });
+
+    it("a bare prefix with no database name is not ours", async () => {
+      await seedPlatformKey("pg-backup-dsn-");
+      await request(app).get("/keys/platform/pg-backup-dsn-/decrypt").set(auth).set(job).expect(200);
+      expect((await incidents()).map((i) => i.subject)).toEqual(["pg-backup:off-list:pg-backup-dsn-"]);
     });
   });
 
