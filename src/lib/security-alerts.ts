@@ -16,6 +16,8 @@
  *                          us and never raise; the same name reading another key does.
  * - provider_sweep         one caller service decrypted > SWEEP_PER_CALLER distinct
  *                          providers in 10 min, or one source address > SWEEP_PER_SOURCE.
+ *                          Reads our own jobs make of their listed keys never count
+ *                          (BACKUP-SWEEP-ALERT-1128); every other read does.
  * - auth_failure_burst     >= AUTH_BURST requests with a wrong service key from one
  *                          source address in 10 min.
  *
@@ -167,12 +169,15 @@ export async function runSecurityChecks(e: AuditEvent, test = false): Promise<vo
   }
 }
 
+/** Distinct providers decrypted in scope since `since`, leaving out our own jobs' reads of their listed keys. */
 async function distinctProviders(scope: ReturnType<typeof eq>, since: Date): Promise<string[]> {
   const rows = await db
-    .selectDistinct({ provider: secretAuditEvents.provider })
+    .selectDistinct({ provider: secretAuditEvents.provider, callerService: secretAuditEvents.callerService, grain: secretAuditEvents.grain })
     .from(secretAuditEvents)
     .where(and(scope, eq(secretAuditEvents.action, "decrypt"), gt(secretAuditEvents.createdAt, since)));
-  return rows.map((r) => r.provider).filter((p): p is string => !!p).sort();
+  const providers = new Set<string>();
+  for (const r of rows) if (r.provider && !isOwnRead(r)) providers.add(r.provider);
+  return [...providers].sort();
 }
 
 interface IncidentInput {
