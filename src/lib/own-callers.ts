@@ -18,6 +18,14 @@
  *   container on our box, and the 2026-11-20 dump came through our own
  *   containers too.
  *
+ * - Its reads also never count toward `provider_sweep` (BACKUP-SWEEP-ALERT-1128:
+ *   the twice-daily pg-backup read ~27 DSNs + the R2 keys and mailed two sweep
+ *   alerts). Any off-list read still counts, so a sweep mixing one foreign key
+ *   in still alerts.
+ *
+ * A key ending in `*` is a PREFIX: databases to back up are added by a
+ * key-service write (`pg-backup-dsn-<db>`), never a code change.
+ *
  * Adding a job (or a key a job reads) = one line here in the same ship as the job.
  */
 
@@ -32,6 +40,15 @@ export const OWN_CALLERS: Readonly<Record<string, readonly string[]>> = {
     "cloudflare-r2-private-bucket-name",
     "cloudflare-r2-bucket-name",
   ],
+  // cloudflare-service src/backup (host cron `0 3,15 * * *` /root/distribute/backup-cron.sh,
+  // throwaway pg-backup-run-* container): every database DSN + the private R2 bucket keys
+  "pg-backup": [
+    "pg-backup-dsn-*",
+    "cloudflare-r2-access-key-id",
+    "cloudflare-r2-secret-access-key",
+    "cloudflare-r2-account-id",
+    "cloudflare-r2-private-bucket-name",
+  ],
 };
 
 export function isOwnCaller(service: string | null | undefined): boolean {
@@ -41,5 +58,6 @@ export function isOwnCaller(service: string | null | undefined): boolean {
 /** A platform-key decrypt by one of our jobs, of a key that job reads. */
 export function isOwnRead(e: { callerService: string | null; grain: string | null; provider: string | null }): boolean {
   if (!isOwnCaller(e.callerService) || e.grain !== "platform" || !e.provider) return false;
-  return OWN_CALLERS[e.callerService as string].includes(e.provider);
+  const provider = e.provider;
+  return OWN_CALLERS[e.callerService as string].some((k) => (k.endsWith("*") ? provider.startsWith(k.slice(0, -1)) && provider.length > k.length - 1 : provider === k));
 }
